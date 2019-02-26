@@ -1,3 +1,1 @@
-# path
-
-Path tracer in haskell
+# tracer
