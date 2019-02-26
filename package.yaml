@@ -21,6 +21,9 @@ description: Please see the included README file.
 
 dependencies:
   - base >= 4.7 && < 5
+  - accelerate
+  - accelerate-llvm-native
+  - sdl2
 
 library:
   source-dirs: src
