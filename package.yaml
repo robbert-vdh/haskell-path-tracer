@@ -24,6 +24,7 @@ dependencies:
   - accelerate
   - accelerate-llvm-native
   - sdl2
+  - text
 
 library:
   source-dirs: src
