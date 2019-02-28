@@ -23,6 +23,8 @@ main = do
 loop :: Window -> IO ()
 loop window = do
   events <- pollEvents
+  -- TODO: When we add camera movement we should simply keep track of a 'Set' of
+  --       pressed keys.
   let shouldQuit =
         any
           (\Event {eventPayload} ->
