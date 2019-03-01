@@ -10,6 +10,7 @@ import qualified Graphics.Rendering.OpenGL as GL
 import SDL
 
 import Lib
+import TH
 
 main :: IO ()
 main = do
