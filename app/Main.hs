@@ -48,7 +48,7 @@ loop window = do
 compileShaders :: IO GL.Program
 compileShaders = do
   vs <- GL.createShader GL.VertexShader
-  GL.shaderSourceBS vs $= BS.pack $(readShaderQ "app/shaders/vs.glsl")
+  GL.shaderSourceBS vs $= $(readShaderQ "app/shaders/vs.glsl")
   GL.compileShader vs
   fail
     "TODO: Copy+paste the rest of https://github.com/haskell-game/sdl2/blob/master/examples/OpenGLExample.hs"
