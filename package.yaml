@@ -24,6 +24,8 @@ dependencies:
   - accelerate
   - accelerate-llvm-native
   - bytestring
+  - GLUtil
+  - linear
   - OpenGL
   - sdl2
   - template-haskell

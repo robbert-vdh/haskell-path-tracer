@@ -4,10 +4,12 @@
 module Main where
 
 import Control.Monad (unless)
-import qualified Data.ByteString.Char8 as BS
-import qualified Data.Text as T
-import qualified Graphics.Rendering.OpenGL as GL
+import Debug.Trace
+import Linear (V2)
 import SDL
+import qualified Data.Text as T
+import qualified Graphics.GLUtil as GLU
+import qualified Graphics.Rendering.OpenGL as GL
 
 import Lib
 import TH
@@ -22,10 +24,13 @@ main = do
       , windowOpenGL = Just defaultOpenGL {glProfile = Core Normal 3 3}
       }
   _glContext <- glCreateContext window
-  loop window
+  -- TODO: Pack all the things we reuse (Accelerate arrays, windows, programs,
+  --       buffers etc.) in a struct
+  (program, vao) <- initResources
+  loop window program vao
 
-loop :: Window -> IO ()
-loop window = do
+loop :: Window -> GLU.ShaderProgram -> GL.VertexArrayObject -> IO ()
+loop window program vao = do
   events <- pollEvents
   -- TODO: When we add camera movement we should simply keep track of a 'Set' of
   --       pressed keys.
@@ -41,14 +46,54 @@ loop window = do
                QuitEvent -> True
                _ -> False)
           events
-  glSwapWindow window
-  unless shouldQuit $ loop window
 
--- | Iniitalize the OpenGL shaders.
-compileShaders :: IO GL.Program
-compileShaders = do
-  vs <- GL.createShader GL.VertexShader
-  GL.shaderSourceBS vs $= $(readShaderQ "app/shaders/vs.glsl")
-  GL.compileShader vs
-  fail
-    "TODO: Copy+paste the rest of https://github.com/haskell-game/sdl2/blob/master/examples/OpenGLExample.hs"
+  -- Does SDL do this for us?
+  V2 width height <- get $ windowSize window
+  GL.viewport $=
+    (GL.Position 0 0, GL.Size (fromIntegral width) (fromIntegral height))
+
+  GL.clearColor $= GL.Color4 0.5 0.5 0.5 1.0
+  GL.clear [GL.ColorBuffer]
+
+  GL.bindVertexArrayObject $= Just vao
+  GL.drawArrays GL.Triangles 0 6
+
+  glSwapWindow window
+  unless shouldQuit $ loop window program vao
+
+-- | Iniitalize the OpenGL shaders and all static buffers.
+--
+-- TODO: Copy+paste the rest of https://github.com/haskell-game/sdl2/blob/master/examples/OpenGLExample.hs
+initResources :: IO (GLU.ShaderProgram, GL.VertexArrayObject)
+initResources = do
+  GL.blend $= GL.Enabled
+  GL.blendFunc $= (GL.SrcAlpha, GL.OneMinusSrcAlpha)
+
+  program <- GLU.simpleShaderProgramBS
+    $(readShaderQ "app/shaders/vs.glsl")
+    $(readShaderQ "app/shaders/fs.glsl")
+
+  let vertexAttrib = GLU.getAttrib program "v_pos"
+  vao <- GLU.makeVAO $ do
+    vertexBuffer <- screenQuad
+    GL.bindBuffer GL.ArrayBuffer $= Just vertexBuffer
+    GL.vertexAttribPointer vertexAttrib $=
+      (GL.ToFloat, GL.VertexArrayDescriptor 2 GL.Float 0 GLU.offset0)
+    GL.vertexAttribArray vertexAttrib $= GL.Enabled
+
+  GL.currentProgram $= (Just $ GLU.program program)
+
+  return (program, vao)
+
+-- | Create a screen quad that the fragment shader can be drawn on.
+screenQuad :: IO GL.BufferObject
+screenQuad =
+  GLU.makeBuffer
+    GL.ArrayBuffer
+    ([ V2 (-1.0) (-1.0)
+     , V2 1.0 (-1.0)
+     , V2 (-1.0) 1.0
+     , V2 1.0 (-1.0)
+     , V2 (-1.0) 1.0
+     , V2 1.0 1.0
+     ] :: [V2 Float])
