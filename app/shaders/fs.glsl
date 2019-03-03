@@ -2,7 +2,7 @@
 
 in vec2 f_uv;
 
-out vec3 colour;
+out vec4 colour;
 
 // TODO: Revert this
 // uniform Globals {
@@ -13,5 +13,5 @@ out vec3 colour;
 void main() {
   // colour = texture(u_texture, f_uv).rgb / u_iterations;
 
-  colour = vec3(1.0, 0.1, 0.5);
+  colour = vec4(1.0, f_uv, 1.0);
 }
