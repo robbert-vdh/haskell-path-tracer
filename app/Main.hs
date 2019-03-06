@@ -4,13 +4,20 @@
 module Main where
 
 import Control.Monad (unless)
-import Linear (V2)
-import SDL
+import Data.Array.Accelerate ((:.)((:.)), Z(Z))
+import qualified Data.Array.Accelerate as A
+import qualified Data.Array.Accelerate.Linear as A
 import qualified Data.Text as T
 import qualified Graphics.GLUtil as GLU
 import qualified Graphics.Rendering.OpenGL as GL
+import Linear (V2)
+import SDL
 
-import Lib
+--  TODO: Define a single 'run' function and put this behind a flag
+import qualified Data.Array.Accelerate.LLVM.Native as CPU
+import qualified Data.Array.Accelerate.LLVM.PTX as GPU
+
+-- import Lib
 import TH
 
 main :: IO ()
@@ -96,3 +103,15 @@ screenQuad =
      , V2 (-1.0) 1.0
      , V2 1.0 1.0
      ] :: [V2 Float])
+
+-- * TODO: Remove or move everything below this section
+
+type Color = V3 Float
+
+output :: A.Acc (A.Matrix Color)
+output = A.use $ A.fromFunction (Z :. 600 :. 800) $ const $ V3 1.0 0.5 0.5
+
+ziekeDotProductAlles :: A.Acc (A.Matrix Color) -> A.Acc (A.Matrix Float)
+ziekeDotProductAlles = A.map (A.dot andereVectoryBoi)
+  where
+    andereVectoryBoi = A.constant $ V3 0.1 0.2 0.3
