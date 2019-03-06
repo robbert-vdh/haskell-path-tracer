@@ -23,6 +23,7 @@ dependencies:
   - base >= 4.7 && < 5
   - accelerate
   - accelerate-llvm-native
+  - accelerate-llvm-ptx
   - bytestring
   - linear
   - template-haskell
