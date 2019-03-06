@@ -29,6 +29,7 @@ dependencies:
   - OpenGL
   - sdl2
   - template-haskell
+  - linear-accelerate
   - text
 
 library:

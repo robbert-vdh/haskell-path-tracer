@@ -53,6 +53,8 @@ extra-deps:
       - accelerate-llvm
       - accelerate-llvm-native
       - accelerate-llvm-ptx
+  - github: robbert-vdh/linear-accelerate
+    commit: 8cd63ff609526f832b040cdcceaa41f6030a13b6
 
 # Override default flag values for local packages and extra-deps
 # flags: {}
