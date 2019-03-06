@@ -6,7 +6,7 @@ module Main where
 import Control.Monad (unless)
 import Data.Array.Accelerate ((:.)((:.)), Z(Z))
 import qualified Data.Array.Accelerate as A
-import qualified Data.Array.Accelerate.Linear as A
+import qualified Data.Array.Accelerate.Linear as A ()
 import qualified Data.Text as T
 import qualified Graphics.GLUtil as GLU
 import qualified Graphics.Rendering.OpenGL as GL
@@ -52,6 +52,9 @@ loop window program vao = do
                QuitEvent -> True
                _ -> False)
           events
+      -- TODO: Is there a way to avoid this concatmap? It doesn't seem very
+      --       efficient
+      texture = concatMap (\(V3 r g b) -> [r, g, b]) $ A.toList $ GPU.run output
 
   -- Does SDL do this for us?
   V2 width height <- get $ windowSize window
@@ -60,6 +63,25 @@ loop window program vao = do
 
   GL.clearColor $= GL.Color4 0.5 0.5 0.5 1.0
   GL.clear [GL.ColorBuffer]
+
+  GL.activeTexture $= GL.TextureUnit 0
+  GL.textureBinding GL.Texture2D $= Just (GL.TextureObject 0)
+  GL.textureFilter GL.Texture2D $= ((GL.Linear', Nothing), GL.Linear')
+
+  -- GLutils contains a function that transforms the list of 'Linear.V3' into a
+  -- format OpenGL knows how to deal with
+  GLU.withPixels texture $ \p ->
+    GL.texImage2D
+      GL.Texture2D
+      GL.NoProxy
+      0
+      GL.RGB'
+      (GL.TextureSize2D 800 600)
+      0
+      (GL.PixelData GL.RGB GL.Float p)
+
+  GLU.setUniform program "u_iterations" (1 :: GL.GLint)
+  GLU.setUniform program "u_texture" (0 :: GL.GLint)
 
   GL.bindVertexArrayObject $= Just vao
   GL.drawArrays GL.Triangles 0 6
@@ -108,10 +130,12 @@ screenQuad =
 
 type Color = V3 Float
 
+-- | Act as if we were actually doing something useful.
 output :: A.Acc (A.Matrix Color)
-output = A.use $ A.fromFunction (Z :. 600 :. 800) $ const $ V3 1.0 0.5 0.5
-
-ziekeDotProductAlles :: A.Acc (A.Matrix Color) -> A.Acc (A.Matrix Float)
-ziekeDotProductAlles = A.map (A.dot andereVectoryBoi)
+output = A.map calcColor $ A.use orderedArray
   where
-    andereVectoryBoi = A.constant $ V3 0.1 0.2 0.3
+    orderedArray =
+      A.fromFunction (Z :. 600 :. 800) $ \(Z :. y :. x) ->
+        fromIntegral (x + y * 800) / 6.9
+    calcColor :: A.Exp Float -> A.Exp Color
+    calcColor e = A.lift $ V3 (A.sin e) (A.cos e) e
