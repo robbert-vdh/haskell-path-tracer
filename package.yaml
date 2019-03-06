@@ -30,6 +30,11 @@ dependencies:
   - linear-accelerate
   - text
 
+  # OpenGL related packages
+  - GLUtil
+  - OpenGL
+  - sdl2
+
 library:
   source-dirs: src
 
@@ -45,9 +50,6 @@ executables:
       - -Wall
     dependencies:
       - tracer
-      - GLUtil
-      - OpenGL
-      - sdl2
 
 tests:
   tracer-test:
