@@ -66,7 +66,7 @@ loop window program vao = do
 
   GL.activeTexture $= GL.TextureUnit 0
   GL.textureBinding GL.Texture2D $= Just (GL.TextureObject 0)
-  GL.textureFilter GL.Texture2D $= ((GL.Linear', Nothing), GL.Linear')
+  GL.textureLevelRange GL.Texture2D $= (0, 0)
 
   -- GLutils contains a function that transforms the list of 'Linear.V3' into a
   -- format OpenGL knows how to deal with
