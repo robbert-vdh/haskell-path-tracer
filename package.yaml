@@ -24,10 +24,7 @@ dependencies:
   - accelerate
   - accelerate-llvm-native
   - bytestring
-  - GLUtil
   - linear
-  - OpenGL
-  - sdl2
   - template-haskell
   - linear-accelerate
   - text
@@ -47,6 +44,9 @@ executables:
       - -Wall
     dependencies:
       - tracer
+      - GLUtil
+      - OpenGL
+      - sdl2
 
 tests:
   tracer-test:
