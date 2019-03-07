@@ -44,7 +44,7 @@ library:
 
 flags:
   cpu:
-    description: Run the application using Accelerate's CPU backend.
+    description: "Run the application using Accelerate's CPU backend."
     manual: true
     default: false
 
