@@ -25,9 +25,11 @@ dependencies:
   - accelerate-llvm-native
   - accelerate-llvm-ptx
   - bytestring
+  - lens
+  - lens-accelerate
   - linear
-  - template-haskell
   - linear-accelerate
+  - template-haskell
   - text
 
   # OpenGL related packages
