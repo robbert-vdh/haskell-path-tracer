@@ -13,11 +13,7 @@ import qualified Graphics.Rendering.OpenGL as GL
 import Linear (V2)
 import SDL
 
---  TODO: Define a single 'run' function and put this behind a flag
-import qualified Data.Array.Accelerate.LLVM.Native as CPU
-import qualified Data.Array.Accelerate.LLVM.PTX as GPU
-
--- import Lib
+import Lib
 import TH
 
 main :: IO ()
@@ -54,7 +50,7 @@ loop window program vao = do
           events
       -- TODO: Is there a way to avoid this concatmap? It doesn't seem very
       --       efficient
-      texture = concatMap (\(V3 r g b) -> [r, g, b]) $ A.toList $ GPU.run output
+      texture = concatMap (\(V3 r g b) -> [r, g, b]) $ A.toList $ run output
 
   -- Does SDL do this for us?
   V2 width height <- get $ windowSize window

@@ -38,6 +38,16 @@ dependencies:
 library:
   source-dirs: src
 
+  when:
+    - condition: flag(cpu)
+      cpp-options: -DUSE_CPU_BACKEND
+
+flags:
+  cpu:
+    description: Run the application using Accelerate's CPU backend.
+    manual: true
+    default: false
+
 executables:
   tracer-exe:
     main: Main.hs
