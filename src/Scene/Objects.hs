@@ -41,9 +41,14 @@ data Plane = Plane
   , _planeSpecularity :: Float
   } deriving (Prelude.Eq, Show, Typeable)
 
+data Light = Light
+  { _lightPosition :: Position
+  , _lightColor :: Colour
+  } deriving (Prelude.Eq, Show, Typeable)
+
 -- * Lenses
 --
--- Since Sphere and Plane do not have a type parameter we can't make use
+-- Since Sphere, Plane and Light do not have a type parameter we can't make use
 -- 'liftLens' or `unlift`, so we'll just define some simple getters ourselves.
 
 class HasPosition t where
@@ -52,6 +57,8 @@ instance HasPosition Sphere where
   position = to $ \t -> Exp $ SuccTupIdx (SuccTupIdx (SuccTupIdx ZeroTupIdx)) `Prj` t
 instance HasPosition Plane where
   position = to $ \t -> Exp $ SuccTupIdx (SuccTupIdx (SuccTupIdx ZeroTupIdx)) `Prj` t
+instance HasPosition Light where
+  position = to $ \t -> Exp $ SuccTupIdx ZeroTupIdx `Prj` t
 
 class HasColour t where
   colour :: Getter (Exp t) (Exp Colour)
@@ -59,6 +66,8 @@ instance HasColour Sphere where
   colour = to $ \t -> Exp $ SuccTupIdx ZeroTupIdx `Prj` t
 instance HasColour Plane where
   colour = to $ \t -> Exp $ SuccTupIdx ZeroTupIdx `Prj` t
+instance HasColour Light where
+    colour = to $ \t -> Exp $ ZeroTupIdx `Prj` t
 
 class HasSpecularity t where
   specularity :: Getter (Exp t) (Exp Float)
@@ -92,7 +101,7 @@ instance Lift Exp Sphere where
   type Plain Sphere = Sphere
   lift = constant
 
--- ** Sphere
+-- ** Plane
 
 instance Elt Plane where
   type EltRepr Plane = EltRepr (Position, Direction, Colour, Float)
@@ -108,4 +117,22 @@ instance (cst Float, cst (V3 Float)) => IsProduct cst Plane where
 
 instance Lift Exp Plane where
   type Plain Plane = Plane
+  lift = constant
+
+-- ** Light
+
+instance Elt Light where
+  type EltRepr Light = EltRepr (Position, Colour)
+  eltType = eltType @(Position, Colour)
+  toElt t = let (p, c) = toElt t in Light p c
+  fromElt (Light p c) = fromElt (p, c)
+
+instance (cst (V3 Float)) => IsProduct cst Light where
+  type ProdRepr Light = ProdRepr (Position, Colour)
+  toProd t = let (p, c) = toProd @cst t in Light p c
+  fromProd (Light p c) = fromProd @cst (p, c)
+  prod = prod @cst @(Position, Colour)
+
+instance Lift Exp Light where
+  type Plain Light = Light
   lift = constant
