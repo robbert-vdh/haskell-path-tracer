@@ -45,16 +45,14 @@ extra-deps:
   - llvm-hs-7.0.1
   - github: AccelerateHS/accelerate
     commit: ae15f6531e74b32577d80ea29ebb54075926799a
-    # This is a temporary fork of `accelerate-llvm` to allow PTX compilation for
-    # Volta and Turing GPUs with LLVM 7.0.1
-  - git: https://github.com/robbert-vdh/accelerate-llvm.git
-    commit: 41696c63b1931830f893949ddc517d089e78c299
+  - git: https://github.com/AccelerateHS/accelerate-llvm.git
+    commit: 4b0e92db6940cc52c800627cd710bded5612b4b0
     subdirs:
       - accelerate-llvm
       - accelerate-llvm-native
       - accelerate-llvm-ptx
-  - github: robbert-vdh/linear-accelerate
-    commit: 8cd63ff609526f832b040cdcceaa41f6030a13b6
+  - github: ekmett/linear-accelerate
+    commit: 4f54ea32834100e8c36ac5ef757e08ee799b2544
   - github: tmcdonell/lens-accelerate
     commit: b74eb8098735b1ad6cff3c5655af03d3f29b9f8e
 
