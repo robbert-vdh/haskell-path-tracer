@@ -3,11 +3,14 @@
 
 module Main where
 
+import Control.Concurrent
 import Control.Monad (unless)
 import Data.Array.Accelerate ((:.)((:.)), Z(Z))
 import qualified Data.Array.Accelerate as A
+import qualified Data.Array.Accelerate.Data.Functor as A
 import qualified Data.Array.Accelerate.Linear as A ()
 import qualified Data.Text as T
+import Foreign.Marshal.Array (withArray)
 import qualified Graphics.GLUtil as GLU
 import qualified Graphics.Rendering.OpenGL as GL
 import Linear (V2)
@@ -19,6 +22,7 @@ import TH
 main :: IO ()
 main = do
   initializeAll
+
   window <-
     createWindow (T.pack "Leipe Mocro Tracer") $
     defaultWindow
@@ -26,14 +30,38 @@ main = do
       , windowOpenGL = Just defaultOpenGL {glProfile = Core Normal 3 3}
       }
   _glContext <- glCreateContext window
+  (program, vao) <- initResources
+
+  result <- newMVar $! run initialOutput
+  computationThreadId <- forkOS $ computationLoop result
   -- TODO: Pack all the things we reuse (Accelerate arrays, windows, programs,
   --       buffers etc.) in a struct
-  (program, vao) <- initResources
-  loop window program vao
+  graphicsLoop window program vao result
+  killThread computationThreadId
 
-loop :: Window -> GLU.ShaderProgram -> GL.VertexArrayObject -> IO ()
-loop window program vao = do
+-- | Perform the actual path tracing. This is done in a seperate thread that
+-- shares and 'MVar' with the rendering thread to prevent one of the processes
+-- from blocking another.
+computationLoop :: MVar (A.Matrix Color) -> IO ()
+computationLoop result = do
+  texture <- readMVar result
+  -- XXX: I'm not sure what it's doing behind the scene, but I'm sure it would
+  --      be better to avoid this A.use on every iteration if possible.
+  _ <- swapMVar result $! run $ doSomething $ A.use texture
+  computationLoop result
+
+-- | Perform all the necesary I/O to handle user input and to render the texture
+-- created by Accelerate using OpenGL. The state is read by copying from an
+-- 'MVar'.
+graphicsLoop ::
+     Window
+  -> GLU.ShaderProgram
+  -> GL.VertexArrayObject
+  -> MVar (A.Matrix Color)
+  -> IO ()
+graphicsLoop window program vao result = do
   events <- pollEvents
+
   -- TODO: When we add camera movement we should simply keep track of a 'Set' of
   --       pressed keys.
   let shouldQuit =
@@ -48,11 +76,11 @@ loop window program vao = do
                QuitEvent -> True
                _ -> False)
           events
-      -- TODO: Is there a way to avoid this concatmap? It doesn't seem very
-      --       efficient
-      texture = concatMap (\(V3 r g b) -> [r, g, b]) $ A.toList $ run output
+  -- TODO: This is faster than a concatMap and works just as well, but it's
+  --       still a lot slower than it should be so I'll try @accelerate-io@'s
+  --       direct pointer casts next.
+  texture <- A.toList <$> readMVar result
 
-  -- Does SDL do this for us?
   V2 width height <- get $ windowSize window
   GL.viewport $=
     (GL.Position 0 0, GL.Size (fromIntegral width) (fromIntegral height))
@@ -64,9 +92,10 @@ loop window program vao = do
   GL.textureBinding GL.Texture2D $= Just (GL.TextureObject 0)
   GL.textureLevelRange GL.Texture2D $= (0, 0)
 
-  -- GLutils contains a function that transforms the list of 'Linear.V3' into a
-  -- format OpenGL knows how to deal with
-  GLU.withPixels texture $ \p ->
+  -- We have to transform our @[V3 Float]@ into a format the OpenGL pixel
+  -- transfer knows how to deal with. We could use a combination of 'concatMap'
+  -- and 'GLU.withPixels' here, but that takes almost 200 miliseconds combined.
+  withArray texture $ \p ->
     GL.texImage2D
       GL.Texture2D
       GL.NoProxy
@@ -83,7 +112,9 @@ loop window program vao = do
   GL.drawArrays GL.Triangles 0 6
 
   glSwapWindow window
-  unless shouldQuit $ loop window program vao
+  -- TODO: Remove debug print
+  putStrLn "frame"
+  unless shouldQuit $ graphicsLoop window program vao result
 
 -- | Iniitalize the OpenGL shaders and all static buffers.
 --
@@ -127,11 +158,16 @@ screenQuad =
 type Color = V3 Float
 
 -- | Act as if we were actually doing something useful.
-output :: A.Acc (A.Matrix Color)
-output = A.map calcColor $ A.use orderedArray
+initialOutput :: A.Acc (A.Matrix Color)
+initialOutput = A.map calcColor $ A.use orderedArray
   where
     orderedArray =
       A.fromFunction (Z :. 600 :. 800) $ \(Z :. y :. x) ->
         fromIntegral (x + y * 800) / 6.9
     calcColor :: A.Exp Float -> A.Exp Color
     calcColor e = A.lift $ V3 (A.sin e) (A.cos e) e
+
+-- | Just a simple operation to perform on the texture that can be performed on
+-- the computation thread.
+doSomething :: A.Acc (A.Matrix Color) -> A.Acc (A.Matrix Color)
+doSomething = A.map (A.fmap ((`A.mod'` 1) . (+ 0.1)))
