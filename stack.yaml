@@ -51,6 +51,8 @@ extra-deps:
       - accelerate-llvm
       - accelerate-llvm-native
       - accelerate-llvm-ptx
+  - github: AccelerateHS/accelerate-io
+    commit: 15c67bf66bf44bc0d6567b0d6f41338bffa178c8
   - github: ekmett/linear-accelerate
     commit: 4f54ea32834100e8c36ac5ef757e08ee799b2544
   - github: tmcdonell/lens-accelerate

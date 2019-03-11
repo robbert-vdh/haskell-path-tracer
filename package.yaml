@@ -22,6 +22,7 @@ description: Please see the included README file.
 dependencies:
   - base >= 4.7 && < 5
   - accelerate
+  - accelerate-io
   - accelerate-llvm-native
   - accelerate-llvm-ptx
   - bytestring
