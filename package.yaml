@@ -32,6 +32,7 @@ dependencies:
   - linear-accelerate
   - template-haskell
   - text
+  - vector
 
   # OpenGL related packages
   - GLUtil

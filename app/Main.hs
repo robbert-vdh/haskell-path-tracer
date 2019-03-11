@@ -8,9 +8,11 @@ import Control.Monad (unless)
 import Data.Array.Accelerate ((:.)((:.)), Z(Z))
 import qualified Data.Array.Accelerate as A
 import qualified Data.Array.Accelerate.Data.Functor as A
+import qualified Data.Array.Accelerate.IO.Data.Vector.Storable as A
 import qualified Data.Array.Accelerate.Linear as A ()
 import qualified Data.Text as T
-import Foreign.Marshal.Array (withArray)
+import qualified Data.Vector.Storable as V
+import Data.Vector.Storable (unsafeWith)
 import qualified Graphics.GLUtil as GLU
 import qualified Graphics.Rendering.OpenGL as GL
 import Linear (V2)
@@ -76,10 +78,11 @@ graphicsLoop window program vao result = do
                QuitEvent -> True
                _ -> False)
           events
-  -- TODO: This is faster than a concatMap and works just as well, but it's
-  --       still a lot slower than it should be so I'll try @accelerate-io@'s
-  --       direct pointer casts next.
-  texture <- A.toList <$> readMVar result
+
+  -- XXX: This is a LOT faster than using 'A.toList' but I feel dirty even
+  --      looking at it. Is there really not a better way?
+  ((((), r), g), b) <- A.toVectors <$> readMVar result
+  let texture = V.zipWith3 V3 r g b
 
   V2 width height <- get $ windowSize window
   GL.viewport $=
@@ -95,7 +98,7 @@ graphicsLoop window program vao result = do
   -- We have to transform our @[V3 Float]@ into a format the OpenGL pixel
   -- transfer knows how to deal with. We could use a combination of 'concatMap'
   -- and 'GLU.withPixels' here, but that takes almost 200 miliseconds combined.
-  withArray texture $ \p ->
+  unsafeWith texture $ \p ->
     GL.texImage2D
       GL.Texture2D
       GL.NoProxy
@@ -112,8 +115,6 @@ graphicsLoop window program vao result = do
   GL.drawArrays GL.Triangles 0 6
 
   glSwapWindow window
-  -- TODO: Remove debug print
-  putStrLn "frame"
   unless shouldQuit $ graphicsLoop window program vao result
 
 -- | Iniitalize the OpenGL shaders and all static buffers.
@@ -170,4 +171,4 @@ initialOutput = A.map calcColor $ A.use orderedArray
 -- | Just a simple operation to perform on the texture that can be performed on
 -- the computation thread.
 doSomething :: A.Acc (A.Matrix Color) -> A.Acc (A.Matrix Color)
-doSomething = A.map (A.fmap ((`A.mod'` 1) . (+ 0.1)))
+doSomething = A.map (A.fmap ((`A.mod'` 1) . (+ 0.0069)))
