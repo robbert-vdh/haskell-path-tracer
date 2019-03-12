@@ -1,7 +1,7 @@
 {-# LANGUAGE CPP #-}
-
 module Lib
   ( run
+  , runN
   ) where
 
 import qualified Data.Array.Accelerate as A
@@ -19,4 +19,12 @@ run :: A.Arrays a => A.Acc a -> a
 run = CPU.run
 #else
 run = GPU.run
+#endif
+
+#ifdef USE_CPU_BACKEND
+runN :: CPU.Afunction f => f -> CPU.AfunctionR f
+runN = CPU.runN
+#else
+runN :: GPU.Afunction f => f -> GPU.AfunctionR f
+runN = GPU.runN
 #endif

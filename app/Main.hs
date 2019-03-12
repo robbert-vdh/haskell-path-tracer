@@ -45,12 +45,12 @@ main = do
 -- shares and 'MVar' with the rendering thread to prevent one of the processes
 -- from blocking another.
 computationLoop :: MVar (A.Matrix Color) -> IO ()
-computationLoop result = do
-  texture <- readMVar result
-  -- XXX: I'm not sure what it's doing behind the scene, but I'm sure it would
-  --      be better to avoid this A.use on every iteration if possible.
-  _ <- swapMVar result $! run $ doSomething $ A.use texture
-  computationLoop result
+computationLoop mvar = readMVar mvar >>= go
+  where
+    compute = runN doSomething
+    go texture = do
+      _ <- swapMVar mvar $! compute texture
+      go texture
 
 -- | Perform all the necesary I/O to handle user input and to render the texture
 -- created by Accelerate using OpenGL. The state is read by copying from an
