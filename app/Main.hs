@@ -49,8 +49,9 @@ computationLoop mvar = readMVar mvar >>= go
   where
     compute = runN doSomething
     go texture = do
-      _ <- swapMVar mvar $! compute texture
-      go texture
+      let texture' = compute texture
+      _ <- swapMVar mvar $! texture'
+      go texture'
 
 -- | Perform all the necesary I/O to handle user input and to render the texture
 -- created by Accelerate using OpenGL. The state is read by copying from an
