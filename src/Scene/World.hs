@@ -5,6 +5,7 @@ import Scene.Objects
 import Data.Array.Accelerate as A
 import Data.Array.Accelerate.Linear.V3
 
+-- | These are the objects and lights used in our static scene.
 getObjects :: Scene
 getObjects =
   Scene
