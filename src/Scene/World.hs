@@ -5,6 +5,13 @@ import Scene.Objects
 import Data.Array.Accelerate as A
 import Data.Array.Accelerate.Linear.V3
 
+getStartCamera :: Camera
+getStartCamera = Camera
+   { _cameraPosition = V3 1.0 (-1.6) (-4.8)
+   , _cameraDirection = V3 0.3 (-0.3) 0.0
+   , _cameraFov = 90
+   }
+
 -- | These are the objects and lights used in our static scene.
 getObjects :: Scene
 getObjects =
