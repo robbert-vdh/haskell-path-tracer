@@ -51,12 +51,18 @@ data Scene = Scene
   , _sceneLights :: A.Vector Light
   } deriving Typeable
 
-makeFields ''Scene
+data Camera = Camera
+  { _cameraPosition :: Position
+  , _cameraDirection :: Position
+  , _cameraFov :: Int
+  } deriving (Prelude.Eq, Show, Typeable)
 
 -- * Lenses
 --
 -- Since Sphere, Plane and Light do not have a type parameter we can't make use
 -- 'liftLens' or `unlift`, so we'll just define some simple getters ourselves.
+
+makeFields ''Scene
 
 class HasPosition t where
   position :: Getter (Exp t) (Exp Position)
@@ -66,6 +72,8 @@ instance HasPosition Plane where
   position = to $ \t -> Exp $ SuccTupIdx (SuccTupIdx (SuccTupIdx ZeroTupIdx)) `Prj` t
 instance HasPosition Light where
   position = to $ \t -> Exp $ SuccTupIdx ZeroTupIdx `Prj` t
+instance HasPosition Camera where
+  position = to $ \t -> Exp $ SuccTupIdx (SuccTupIdx ZeroTupIdx) `Prj` t
 
 class HasColor t where
   color :: Getter (Exp t) (Exp Color)
@@ -83,15 +91,21 @@ instance HasSpecularity Sphere where
 instance HasSpecularity Plane where
   specularity = to $ \t -> Exp $ ZeroTupIdx `Prj` t
 
+class HasDirection t where
+  direction :: Getter (Exp t) (Exp Direction)
+instance HasDirection Plane where
+  direction = to $ \t -> Exp $ SuccTupIdx (SuccTupIdx ZeroTupIdx) `Prj` t
+instance HasDirection Camera where
+  direction = to $ \t -> Exp $ SuccTupIdx ZeroTupIdx `Prj` t
+
 radius :: Getter (Exp Sphere) (Exp Float)
 radius = to $ \t -> Exp $ SuccTupIdx (SuccTupIdx ZeroTupIdx) `Prj` t
 
-direction :: Getter (Exp Plane) (Exp Direction)
-direction = to $ \t -> Exp $ SuccTupIdx (SuccTupIdx ZeroTupIdx) `Prj` t
+fov :: Getter (Exp Camera) (Exp Int)
+fov = to $ \t -> Exp $ ZeroTupIdx `Prj` t
 
 -- * Instances
 -- ** Sphere
-
 instance Elt Sphere where
   type EltRepr Sphere = EltRepr (Position, Float, Color, Float)
   eltType = eltType @(Position, Float, Color, Float)
@@ -109,7 +123,6 @@ instance Lift Exp Sphere where
   lift = constant
 
 -- ** Plane
-
 instance Elt Plane where
   type EltRepr Plane = EltRepr (Position, Direction, Color, Float)
   eltType = eltType @(Position, Direction, Color, Float)
@@ -127,7 +140,6 @@ instance Lift Exp Plane where
   lift = constant
 
 -- ** Light
-
 instance Elt Light where
   type EltRepr Light = EltRepr (Position, Color)
   eltType = eltType @(Position, Color)
@@ -142,4 +154,21 @@ instance (cst (V3 Float)) => IsProduct cst Light where
 
 instance Lift Exp Light where
   type Plain Light = Light
+  lift = constant
+
+-- ** Camera
+instance Elt Camera where
+  type EltRepr Camera = EltRepr (Position, Direction, Int)
+  eltType = eltType @(Position, Direction, Int)
+  toElt t = let (p, r, f) = toElt t in Camera p r f
+  fromElt (Camera p r f) = fromElt (p, r, f)
+
+instance (cst Int, cst (V3 Float)) => IsProduct cst Camera where
+  type ProdRepr Camera = ProdRepr (Position, Direction, Int)
+  toProd t = let (p, r, f) = toProd @cst t in Camera p r f
+  fromProd (Camera p r f) = fromProd @cst (p, r, f)
+  prod = prod @cst @(Position, Direction, Int)
+
+instance Lift Exp Camera where
+  type Plain Camera = Camera
   lift = constant

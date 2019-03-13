@@ -18,7 +18,7 @@ import Linear (V2)
 import SDL
 
 import Lib
-import Scene.Objects (Color)
+import Scene.Objects (Color, Camera)
 import TH
 
 data Result = Result
@@ -55,14 +55,15 @@ main = do
   killThread computationThreadId
 
 -- TODO: Replace these functions by our awesome path tracing logic
-data Camera
 aCamera :: Camera
 aCamera = undefined
 -- | The input consists of tuples of @(screen_position, rng_seed)@.
 anArray :: A.Matrix (V2 Int, Int)
 anArray = undefined
+
 aColorArray :: A.Matrix Color
 aColorArray = undefined
+
 doSomething :: Camera -> A.Acc (A.Matrix (V2 Int, Int)) -> A.Acc (A.Matrix Color) -> A.Acc (A.Matrix Color)
 doSomething = undefined
 
