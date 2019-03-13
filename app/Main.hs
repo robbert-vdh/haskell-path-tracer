@@ -4,10 +4,9 @@
 module Main where
 
 import Control.Concurrent
+import Control.Lens
 import Control.Monad (unless)
-import Data.Array.Accelerate ((:.)((:.)), Z(Z))
 import qualified Data.Array.Accelerate as A
-import qualified Data.Array.Accelerate.Data.Functor as A
 import qualified Data.Array.Accelerate.IO.Data.Vector.Storable as A
 import qualified Data.Array.Accelerate.Linear as A ()
 import qualified Data.Text as T
@@ -19,7 +18,15 @@ import Linear (V2)
 import SDL
 
 import Lib
+import Scene.Objects (Color)
 import TH
+
+data Result = Result
+  { _texture :: A.Matrix Color
+  , _iterations :: Int
+  }
+
+makeLenses ''Result
 
 main :: IO ()
 main = do
@@ -34,35 +41,49 @@ main = do
   _glContext <- glCreateContext window
   (program, vao) <- initResources
 
-  result <- newMVar $! run initialOutput
+  -- TODO: Run the algorithm once here to populate a result object
+  result <-
+    newMVar $!
+    Result
+      { _texture = runN (doSomething aCamera) anArray aColorArray
+      , _iterations = 1
+      }
   computationThreadId <- forkOS $ computationLoop result
   -- TODO: Pack all the things we reuse (Accelerate arrays, windows, programs,
   --       buffers etc.) in a struct
   graphicsLoop window program vao result
   killThread computationThreadId
 
+-- TODO: Replace these functions by our awesome path tracing logic
+data Camera
+aCamera :: Camera
+aCamera = undefined
+-- | The input consists of tuples of @(screen_position, rng_seed)@.
+anArray :: A.Matrix (V2 Int, Int)
+anArray = undefined
+aColorArray :: A.Matrix Color
+aColorArray = undefined
+doSomething :: Camera -> A.Acc (A.Matrix (V2 Int, Int)) -> A.Acc (A.Matrix Color) -> A.Acc (A.Matrix Color)
+doSomething = undefined
+
 -- | Perform the actual path tracing. This is done in a seperate thread that
 -- shares and 'MVar' with the rendering thread to prevent one of the processes
 -- from blocking another.
-computationLoop :: MVar (A.Matrix Color) -> IO ()
-computationLoop mvar = readMVar mvar >>= go
+computationLoop :: MVar Result -> IO ()
+computationLoop mResult = readMVar mResult >>= go
   where
-    compute = runN doSomething
-    go texture = do
-      let texture' = compute texture
-      _ <- swapMVar mvar $! texture'
-      go texture'
+    compute = runN $! doSomething aCamera
+    go result = do
+      let texture' = compute anArray $ result ^. texture
+          result' = result & texture .~ texture' & iterations +~ 1
+      _ <- swapMVar mResult $! result'
+      go result'
 
 -- | Perform all the necesary I/O to handle user input and to render the texture
 -- created by Accelerate using OpenGL. The state is read by copying from an
 -- 'MVar'.
-graphicsLoop ::
-     Window
-  -> GLU.ShaderProgram
-  -> GL.VertexArrayObject
-  -> MVar (A.Matrix Color)
-  -> IO ()
-graphicsLoop window program vao result = do
+graphicsLoop :: Window -> GLU.ShaderProgram -> GL.VertexArrayObject -> MVar Result -> IO ()
+graphicsLoop window program vao mResult = do
   events <- pollEvents
 
   -- TODO: When we add camera movement we should simply keep track of a 'Set' of
@@ -82,8 +103,9 @@ graphicsLoop window program vao result = do
 
   -- XXX: This is a LOT faster than using 'A.toList' but I feel dirty even
   --      looking at it. Is there really not a better way?
-  ((((), r), g), b) <- A.toVectors <$> readMVar result
-  let texture = V.zipWith3 V3 r g b
+  result <- readMVar mResult
+  let ((((), r), g), b) = A.toVectors $ result ^. texture
+      pixelBuffer = V.zipWith3 V3 r g b
 
   V2 width height <- get $ windowSize window
   GL.viewport $=
@@ -99,7 +121,7 @@ graphicsLoop window program vao result = do
   -- We have to transform our @[V3 Float]@ into a format the OpenGL pixel
   -- transfer knows how to deal with. We could use a combination of 'concatMap'
   -- and 'GLU.withPixels' here, but that takes almost 200 miliseconds combined.
-  unsafeWith texture $ \p ->
+  unsafeWith pixelBuffer $ \p ->
     GL.texImage2D
       GL.Texture2D
       GL.NoProxy
@@ -109,14 +131,14 @@ graphicsLoop window program vao result = do
       0
       (GL.PixelData GL.RGB GL.Float p)
 
-  GLU.setUniform program "u_iterations" (1 :: GL.GLint)
+  GLU.setUniform program "u_iterations" (fromIntegral (result ^. iterations) :: GL.GLint)
   GLU.setUniform program "u_texture" (0 :: GL.GLint)
 
   GL.bindVertexArrayObject $= Just vao
   GL.drawArrays GL.Triangles 0 6
 
   glSwapWindow window
-  unless shouldQuit $ graphicsLoop window program vao result
+  unless shouldQuit $ graphicsLoop window program vao mResult
 
 -- | Iniitalize the OpenGL shaders and all static buffers.
 --
@@ -154,22 +176,3 @@ screenQuad =
      , V2 (-1.0) 1.0
      , V2 1.0 1.0
      ] :: [V2 Float])
-
--- * TODO: Remove or move everything below this section
-
-type Color = V3 Float
-
--- | Act as if we were actually doing something useful.
-initialOutput :: A.Acc (A.Matrix Color)
-initialOutput = A.map calcColor $ A.use orderedArray
-  where
-    orderedArray =
-      A.fromFunction (Z :. 600 :. 800) $ \(Z :. y :. x) ->
-        fromIntegral (x + y * 800) / 6.9
-    calcColor :: A.Exp Float -> A.Exp Color
-    calcColor e = A.lift $ V3 (A.sin e) (A.cos e) e
-
--- | Just a simple operation to perform on the texture that can be performed on
--- the computation thread.
-doSomething :: A.Acc (A.Matrix Color) -> A.Acc (A.Matrix Color)
-doSomething = A.map (A.fmap ((`A.mod'` 1) . (+ 0.0069)))
