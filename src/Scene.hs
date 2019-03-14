@@ -5,8 +5,14 @@
 
 module Scene where
 
+import Control.Lens
 import Data.Array.Accelerate as A
+import Data.Array.Accelerate.Data.Functor
 import Data.Array.Accelerate.Linear as A
+import Data.Array.Accelerate.Array.Sugar (Elt)
+
+import Prelude hiding (Functor, (<$>), fmap)
+import qualified Prelude as P
 
 import Scene.Objects
 
@@ -15,6 +21,11 @@ import Scene.Objects
 screenWidth, screenHeight :: Int32
 screenWidth = 800
 screenHeight = 600
+
+-- | The dimensions of the screen as a float vector.
+screenSize :: Exp (V2 Float)
+screenSize =
+  constant $ V2 (P.fromIntegral screenWidth) (P.fromIntegral screenHeight)
 
 -- | Render a single sample, combining the previous results with the newly
 -- generated sample.
@@ -27,8 +38,24 @@ render camera screen old = A.zipWith (+) result old
   where
     result = undefined
 
--- | Dit is helemaal leip, zelfs al probeert het gewoon te doen:
---
--- https://hackage.haskell.org/package/linear-1.20.8/docs/Linear-Projection.html
-screenToViewRays :: Camera -> Acc (Matrix (V2 Int, Int)) -> Acc (Matrix (Direction, Int))
-screenToViewRays = undefined
+-- | Calculate the origin and directions of the primary rays based on a camera
+-- and a matrix of screen pixel positions. These positions should be in the
+-- format @V2 <0 .. screenWidth> <0 .. screenHeight>@.
+primaryRays :: Camera -> Acc (Matrix (V2 Int, Int)) -> Acc (Matrix (Ray, Int))
+primaryRays camera = A.map transform
+  where
+    viewMatrix = undefined
+    transform :: Exp (V2 Int, Int) -> Exp (Ray, Int)
+    transform e =
+      let rasterPos = vecToFloat $ e ^. _1
+          -- Screen space is the space where both X and Y coordinates lie within
+          -- the @[-1, 1]@ interval
+          screenPos = rasterPos / screenSize * 2.0 - 1.0
+          seed = e ^. _2
+       in undefined
+
+-- | Convert an integer vector to a float vector. This is only used when
+-- converting between rasterization and world spaces.
+vecToFloat ::
+     (Functor f, Elt (f Int), Elt (f Float)) => Exp (f Int) -> Exp (f Float)
+vecToFloat = fmap toFloating

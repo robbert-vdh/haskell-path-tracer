@@ -51,6 +51,11 @@ data Scene = Scene
   , _sceneLights :: A.Vector Light
   } deriving Typeable
 
+data Ray = Ray
+  { _rayOrigin :: Position
+  , _rayDirection :: Direction
+  } deriving (Prelude.Eq, Show, Typeable)
+
 data Camera = Camera
   { _cameraPosition :: Position
   , _cameraDirection :: Direction
@@ -95,11 +100,16 @@ class HasDirection t where
   direction :: Getter (Exp t) (Exp Direction)
 instance HasDirection Plane where
   direction = to $ \t -> Exp $ SuccTupIdx (SuccTupIdx ZeroTupIdx) `Prj` t
+instance HasDirection Ray where
+  direction = to $ \t -> Exp $ ZeroTupIdx `Prj` t
 instance HasDirection Camera where
   direction = to $ \t -> Exp $ SuccTupIdx ZeroTupIdx `Prj` t
 
 radius :: Getter (Exp Sphere) (Exp Float)
 radius = to $ \t -> Exp $ SuccTupIdx (SuccTupIdx ZeroTupIdx) `Prj` t
+
+origin :: Getter (Exp Ray) (Exp Position)
+origin = to $ \t -> Exp $ SuccTupIdx ZeroTupIdx `Prj` t
 
 fov :: Getter (Exp Camera) (Exp Int)
 fov = to $ \t -> Exp $ ZeroTupIdx `Prj` t
@@ -154,6 +164,23 @@ instance (cst (V3 Float)) => IsProduct cst Light where
 
 instance Lift Exp Light where
   type Plain Light = Light
+  lift = constant
+
+-- ** Ray
+instance Elt Ray where
+  type EltRepr Ray = EltRepr (Position, Direction)
+  eltType = eltType @(Position, Direction)
+  toElt t = let (p, c) = toElt t in Ray p c
+  fromElt (Ray p c) = fromElt (p, c)
+
+instance (cst (V3 Float)) => IsProduct cst Ray where
+  type ProdRepr Ray = ProdRepr (Position, Direction)
+  toProd t = let (p, c) = toProd @cst t in Ray p c
+  fromProd (Ray p c) = fromProd @cst (p, c)
+  prod = prod @cst @(Position, Direction)
+
+instance Lift Exp Ray where
+  type Plain Ray = Ray
   lift = constant
 
 -- ** Camera
