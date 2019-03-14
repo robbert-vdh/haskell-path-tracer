@@ -53,7 +53,7 @@ data Scene = Scene
 
 data Camera = Camera
   { _cameraPosition :: Position
-  , _cameraDirection :: Position
+  , _cameraDirection :: Direction
   , _cameraFov :: Int
   } deriving (Prelude.Eq, Show, Typeable)
 
