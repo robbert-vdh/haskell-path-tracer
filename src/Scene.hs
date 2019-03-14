@@ -2,16 +2,19 @@
 --
 -- One important thing to note here are the @(V2 Int, Int)@ tuples. These
 -- represent pairs of screen pixel positions and a RNG seed.
+--
+-- Also note that from here on out everything is living inside of Accelerate, so
+-- assume that any common functions that exist in both the prelude and in
+-- Accelerate are lifted to work on Accelerate data structures.
 
 module Scene where
 
 import Control.Lens
-import Data.Array.Accelerate as A
+import Data.Array.Accelerate
 import Data.Array.Accelerate.Data.Functor
-import Data.Array.Accelerate.Linear as A
+import Data.Array.Accelerate.Linear
 import Data.Array.Accelerate.Array.Sugar (Elt)
 
-import Prelude hiding (Functor, (<$>), fmap)
 import qualified Prelude as P
 
 import Scene.Objects
@@ -34,7 +37,7 @@ render ::
   -> Acc (Matrix (V2 Int, Int))
   -> Acc (Matrix Color)
   -> Acc (Matrix Color)
-render camera screen old = A.zipWith (+) result old
+render camera screen old = zipWith (+) result old
   where
     result = undefined
 
@@ -42,7 +45,7 @@ render camera screen old = A.zipWith (+) result old
 -- and a matrix of screen pixel positions. These positions should be in the
 -- format @V2 <0 .. screenWidth> <0 .. screenHeight>@.
 primaryRays :: Camera -> Acc (Matrix (V2 Int, Int)) -> Acc (Matrix (Ray, Int))
-primaryRays camera = A.map transform
+primaryRays camera = map transform
   where
     viewMatrix = undefined
     transform :: Exp (V2 Int, Int) -> Exp (Ray, Int)
