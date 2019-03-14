@@ -12,12 +12,14 @@ import qualified Data.Array.Accelerate.Linear as A ()
 import qualified Data.Text as T
 import qualified Data.Vector.Storable as V
 import Data.Vector.Storable (unsafeWith)
+import Foreign.C.Types (CInt(..))
 import qualified Graphics.GLUtil as GLU
 import qualified Graphics.Rendering.OpenGL as GL
 import Linear (V2)
 import SDL
 
 import Lib
+import Scene
 import Scene.Objects (Color, Camera)
 import TH
 
@@ -36,6 +38,7 @@ main = do
     createWindow (T.pack "Leipe Mocro Tracer") $
     defaultWindow
       { windowInputGrabbed = False -- Change this to True when implementing user input
+      , windowInitialSize = V2 (CInt screenWidth) (CInt screenHeight)
       , windowOpenGL = Just defaultOpenGL {glProfile = Core Normal 3 3}
       }
   _glContext <- glCreateContext window
@@ -128,7 +131,7 @@ graphicsLoop window program vao mResult = do
       GL.NoProxy
       0
       GL.RGB'
-      (GL.TextureSize2D 800 600)
+      (GL.TextureSize2D screenWidth screenHeight)
       0
       (GL.PixelData GL.RGB GL.Float p)
 

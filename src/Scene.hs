@@ -10,6 +10,12 @@ import Data.Array.Accelerate.Linear as A
 
 import Scene.Objects
 
+-- | The dimensions of the screen. These are hard coded for efficiency's sake
+-- even though the window could be resizable with minor adjustments.
+screenWidth, screenHeight :: Int32
+screenWidth = 800
+screenHeight = 600
+
 -- | Render a single sample, combining the previous results with the newly
 -- generated sample.
 render ::
