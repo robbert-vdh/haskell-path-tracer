@@ -115,10 +115,6 @@ graphicsLoop window program vao mResult = do
   GL.clearColor $= GL.Color4 0.5 0.5 0.5 1.0
   GL.clear [GL.ColorBuffer]
 
-  GL.activeTexture $= GL.TextureUnit 0
-  GL.textureBinding GL.Texture2D $= Just (GL.TextureObject 0)
-  GL.textureLevelRange GL.Texture2D $= (0, 0)
-
   -- We have to transform our @[V3 Float]@ into a format the OpenGL pixel
   -- transfer knows how to deal with. We could use a combination of 'concatMap'
   -- and 'GLU.withPixels' here, but that takes almost 200 miliseconds combined.
@@ -163,6 +159,12 @@ initResources = do
     GL.vertexAttribArray vertexAttrib $= GL.Enabled
 
   GL.currentProgram $= (Just $ GLU.program program)
+
+  -- We have to make sure the maximum number of mipmaps is set to zero,
+  -- otherwise the texture will be incomplete and not render at all
+  GL.activeTexture $= GL.TextureUnit 0
+  GL.textureBinding GL.Texture2D $= Just (GL.TextureObject 0)
+  GL.textureLevelRange GL.Texture2D $= (0, 0)
 
   return (program, vao)
 
