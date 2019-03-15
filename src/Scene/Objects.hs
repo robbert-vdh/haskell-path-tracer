@@ -51,9 +51,13 @@ data Scene = Scene
   , _sceneLights :: A.Vector Light
   } deriving Typeable
 
-data Ray = Ray
-  { _rayOrigin :: Position
-  , _rayDirection :: Direction
+-- | Any ray that is cast through the scene. This is defined as a type alias as
+-- the 'Ray' has to be polymorphic in order to to be able to lift a @Ray (Exp
+-- (V3 Float)) (Exp (V3 Float))@ into a @Exp (Ray (V3 Float) (V3 Float))@.
+type Ray = Ray' Float
+data Ray' a = Ray
+  { _rayOrigin :: V3 a
+  , _rayDirection :: V3 a
   } deriving (Prelude.Eq, Show, Typeable)
 
 data Camera = Camera
@@ -100,7 +104,7 @@ class HasDirection t a | t -> a where
   direction :: Getter (Exp t) (Exp a)
 instance HasDirection Plane Direction where
   direction = to $ \t -> Exp $ SuccTupIdx (SuccTupIdx ZeroTupIdx) `Prj` t
-instance HasDirection Ray Direction where
+instance Elt a => HasDirection (Ray' a) (V3 a) where
   direction = to $ \t -> Exp $ ZeroTupIdx `Prj` t
 instance HasDirection Camera Direction where
   direction = to $ \t -> Exp $ SuccTupIdx ZeroTupIdx `Prj` t
@@ -108,7 +112,7 @@ instance HasDirection Camera Direction where
 radius :: Getter (Exp Sphere) (Exp Float)
 radius = to $ \t -> Exp $ SuccTupIdx (SuccTupIdx ZeroTupIdx) `Prj` t
 
-origin :: Getter (Exp Ray) (Exp Position)
+origin :: Elt a => Getter (Exp (Ray' a)) (Exp (V3 a))
 origin = to $ \t -> Exp $ SuccTupIdx ZeroTupIdx `Prj` t
 
 fov :: Getter (Exp Camera) (Exp Int)
@@ -167,20 +171,20 @@ instance Lift Exp Light where
   lift = constant
 
 -- ** Ray
-instance Elt Ray where
-  type EltRepr Ray = EltRepr (Position, Direction)
-  eltType = eltType @(Position, Direction)
+instance Elt a => Elt (Ray' a) where
+  type EltRepr (Ray' a) = EltRepr (V3 a, V3 a)
+  eltType = eltType @(V3 a, V3 a)
   toElt t = let (p, c) = toElt t in Ray p c
   fromElt (Ray p c) = fromElt (p, c)
 
-instance (cst (V3 Float)) => IsProduct cst Ray where
-  type ProdRepr Ray = ProdRepr (Position, Direction)
+instance (cst (V3 a)) => IsProduct cst (Ray' a) where
+  type ProdRepr (Ray' a) = ProdRepr (V3 a, V3 a)
   toProd t = let (p, c) = toProd @cst t in Ray p c
   fromProd (Ray p c) = fromProd @cst (p, c)
-  prod = prod @cst @(Position, Direction)
+  prod = prod @cst @(V3 a, V3 a)
 
-instance Lift Exp Ray where
-  type Plain Ray = Ray
+instance Elt a => Lift Exp (Ray' a) where
+  type Plain (Ray' a) = (Ray' a)
   lift = constant
 
 -- ** Camera
