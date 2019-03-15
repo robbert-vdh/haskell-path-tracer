@@ -19,6 +19,14 @@ import Data.Array.Accelerate.Smart
 import Data.Typeable
 import qualified Prelude
 
+-- TODO: There are a few things that could possible simplify things for us that
+--       we have not tried yet:
+--
+--       - Deriving (Generic, Elt, IsTuple, etc.)
+--       - Using the default implementations for Elt and IsProduct (not
+--         necessary with the above)
+--       - Pattern synonyms instead of lenses whereever that makes sense
+
 -- * Objects
 
 type Position = V3 Float
