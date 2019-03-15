@@ -8,5 +8,5 @@ uniform int u_iterations;
 uniform sampler2D u_texture;
 
 void main() {
-  color = vec4(texture(u_texture, f_uv).rgb / u_iterations, 1.00);
+  color = vec4(texture(u_texture, f_uv).rgb / u_iterations, 1.0);
 }

@@ -127,7 +127,10 @@ graphicsLoop window program vao mResult = do
       GL.Texture2D
       GL.NoProxy
       0
-      GL.RGB'
+      -- OpenGL will neatly normalize our texture to [0, 1] floating point
+      -- values if we use the 'GL.RGB'' internal representation instead. Not
+      -- like we've done this or anything.
+      GL.RGB32F
       (GL.TextureSize2D screenWidth screenHeight)
       0
       (GL.PixelData GL.RGB GL.Float p)
