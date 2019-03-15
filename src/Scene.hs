@@ -9,7 +9,7 @@
 
 module Scene where
 
-import Control.Lens
+import Control.Lens hiding (transform)
 import Data.Array.Accelerate
 import Data.Array.Accelerate.Data.Functor
 import Data.Array.Accelerate.Linear
@@ -55,7 +55,14 @@ primaryRays camera = map transform
           -- the @[-1, 1]@ interval
           screenPos = rasterPos / screenSize * 2.0 - 1.0
           seed = e ^. _2
-       in undefined
+
+          -- TODO: Replace. This is an example for how to create rays and how to
+          --       lift them to expressions.
+          worldPos :: Exp (V3 Float)
+          worldPos = lift $ V3 (screenPos ^. _x) (screenPos ^. _y) 0.0
+          ray :: Exp Ray
+          ray = lift $ Ray (unlift worldPos :: V3 (Exp Float)) (unlift worldPos)
+       in lift (ray, seed)
 
 -- | Convert an integer vector to a float vector. This is only used when
 -- converting between rasterization and world spaces.
