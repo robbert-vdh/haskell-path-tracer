@@ -1,14 +1,15 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Main where
 
 import Control.Concurrent
 import Control.Lens
 import Control.Monad (unless)
+import Data.Array.Accelerate ((:.)(..), Z(..))
 import qualified Data.Array.Accelerate as A
 import qualified Data.Array.Accelerate.IO.Data.Vector.Storable as A
-import qualified Data.Array.Accelerate.Linear as A ()
 import qualified Data.Text as T
 import qualified Data.Vector.Storable as V
 import Data.Vector.Storable (unsafeWith)
@@ -44,11 +45,10 @@ main = do
   _glContext <- glCreateContext window
   (program, vao) <- initResources
 
-  -- TODO: Run the algorithm once here to populate a result object
   result <-
     newMVar $!
     Result
-      { _texture = runN (doSomething aCamera) anArray aColorArray
+      { _texture = compute screenPixels initialOutput
       , _iterations = 1
       }
   computationThreadId <- forkOS $ computationLoop result
@@ -57,18 +57,16 @@ main = do
   graphicsLoop window program vao result
   killThread computationThreadId
 
--- TODO: Replace these functions by our awesome path tracing logic
-aCamera :: Camera
-aCamera = undefined
--- | The input consists of tuples of @(screen_position, rng_seed)@.
-anArray :: A.Matrix (V2 Int, Int)
-anArray = undefined
-
-aColorArray :: A.Matrix Color
-aColorArray = undefined
-
-doSomething :: Camera -> A.Acc (A.Matrix (V2 Int, Int)) -> A.Acc (A.Matrix Color) -> A.Acc (A.Matrix Color)
-doSomething = undefined
+-- | Render a single sample based on the a matrix of @(<screen pixel>, <rng
+-- seed>)@ pairs and the previously computed output.
+--
+-- TODO: The camera is hardcoded for now, but this obviously should not be the
+--       case!
+compute ::
+     A.Array A.DIM2 (V2 Int, Int)
+  -> A.Array A.DIM2 Color
+  -> A.Array A.DIM2 Color
+compute = runN $! render theCamera
 
 -- | Perform the actual path tracing. This is done in a seperate thread that
 -- shares and 'MVar' with the rendering thread to prevent one of the processes
@@ -76,9 +74,8 @@ doSomething = undefined
 computationLoop :: MVar Result -> IO ()
 computationLoop mResult = readMVar mResult >>= go
   where
-    compute = runN $! doSomething aCamera
     go result = do
-      let texture' = compute anArray $ result ^. texture
+      let texture' = compute screenPixels $ result ^. texture
           result' = result & texture .~ texture' & iterations +~ 1
       _ <- swapMVar mResult $! result'
       go result'
@@ -180,3 +177,23 @@ screenQuad =
      , V2 (-1.0) 1.0
      , V2 1.0 1.0
      ] :: [V2 Float])
+
+-- | The output matrix initialized with all zero values. This is used during the
+-- initialization and after moving the camera.
+initialOutput :: A.Matrix Color
+initialOutput = A.fromFunction screenShape $ const $ V3 0.0 0.0 0.0
+
+-- | A matrix containing coordinates for every pixel on the screen. This is used
+-- to cast the actual rays.
+--
+-- TODO: Add RNG seeds here
+screenPixels :: (A.Matrix (V2 Int, Int))
+screenPixels = A.fromFunction screenShape $ \(Z :. y :. x) -> (V2 x y, 1)
+
+-- | The size of the output as an array shape.
+screenShape :: Z :. Int :. Int
+screenShape = Z :. fromIntegral screenHeight :. fromIntegral screenWidth
+
+-- TODO: Replace this with some actual value
+theCamera :: Camera
+theCamera = undefined
