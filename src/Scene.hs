@@ -25,10 +25,13 @@ screenWidth, screenHeight :: Int32
 screenWidth = 800
 screenHeight = 600
 
--- | The dimensions of the screen as a float vector.
+-- | The dimensions of the screen as a float vector. Note that the screen height
+-- has been inverted here as the @y@ axis changes orientation when converting
+-- between rasterization and screen spaces.
 screenSize :: Exp (V2 Float)
 screenSize =
-  constant $ V2 (P.fromIntegral screenWidth) (P.fromIntegral screenHeight)
+  constant $
+  V2 (P.fromIntegral screenWidth) (P.fromIntegral $ negate screenHeight)
 
 -- | Render a single sample, combining the previous results with the newly
 -- generated sample.
@@ -52,8 +55,12 @@ primaryRays camera = map transform
     transform e =
       let rasterPos = vecToFloat $ e ^. _1
           -- Screen space is the space where both X and Y coordinates lie within
-          -- the @[-1, 1]@ interval
-          screenPos = rasterPos / screenSize * 2.0 - 1.0
+          -- the @[-1, 1]@ interval. Here @(-1, -1)@ is the bottom left and @(1,
+          -- 1)@ is the top right corner. Because of this the @y@ axis has to be
+          -- inverted during the computation. This has already been accounted
+          -- for in 'screenSize', hence why the Y-axis value gets increased by
+          -- two.
+          screenPos = rasterPos / screenSize * 2.0 + constant (V2 (-1.0) 1.0)
           seed = e ^. _2
 
           -- TODO: Replace. This is an example for how to create rays and how to
