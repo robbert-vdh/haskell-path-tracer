@@ -183,9 +183,9 @@ instance (cst (V3 a)) => IsProduct cst (Ray' a) where
   fromProd (Ray p c) = fromProd @cst (p, c)
   prod = prod @cst @(V3 a, V3 a)
 
-instance Elt a => Lift Exp (Ray' a) where
-  type Plain (Ray' a) = (Ray' a)
-  lift = constant
+instance (Lift Exp a, Elt (Plain a)) => Lift Exp (Ray' a) where
+  type Plain (Ray' a) = Ray' (Plain a)
+  lift (Ray o d) = Exp $ Tuple $ NilTup `SnocTup` lift o `SnocTup` lift d
 
 -- ** Camera
 instance Elt Camera where
