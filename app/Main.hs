@@ -145,8 +145,6 @@ graphicsLoop window program vao mResult = do
   unless shouldQuit $ graphicsLoop window program vao mResult
 
 -- | Iniitalize the OpenGL shaders and all static buffers.
---
--- TODO: Copy+paste the rest of https://github.com/haskell-game/sdl2/blob/master/examples/OpenGLExample.hs
 initResources :: IO (GLU.ShaderProgram, GL.VertexArrayObject)
 initResources = do
   GL.blend $= GL.Enabled
