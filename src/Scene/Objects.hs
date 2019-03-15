@@ -1,3 +1,4 @@
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -25,7 +26,6 @@ import qualified Prelude
 --       - Deriving (Generic, Elt, IsTuple, etc.)
 --       - Using the default implementations for Elt and IsProduct (not
 --         necessary with the above)
---       - Pattern synonyms instead of lenses whereever that makes sense
 
 -- * Objects
 
@@ -62,8 +62,8 @@ data Scene = Scene
 -- | Any ray that is cast through the scene. This is defined as a type alias as
 -- the 'Ray' has to be polymorphic in order to to be able to lift a @Ray (Exp
 -- (V3 Float)) (Exp (V3 Float))@ into a @Exp (Ray (V3 Float) (V3 Float))@.
-type Ray = Ray' Float
-data Ray' a = Ray
+type RayF = Ray Float
+data Ray a = Ray
   { _rayOrigin :: V3 a
   , _rayDirection :: V3 a
   } deriving (Prelude.Eq, Show, Typeable)
@@ -112,7 +112,7 @@ class HasDirection t a | t -> a where
   direction :: Getter (Exp t) (Exp a)
 instance HasDirection Plane Direction where
   direction = to $ \t -> Exp $ SuccTupIdx (SuccTupIdx ZeroTupIdx) `Prj` t
-instance Elt a => HasDirection (Ray' a) (V3 a) where
+instance Elt a => HasDirection (Ray a) (V3 a) where
   direction = to $ \t -> Exp $ ZeroTupIdx `Prj` t
 instance HasDirection Camera Direction where
   direction = to $ \t -> Exp $ SuccTupIdx ZeroTupIdx `Prj` t
@@ -120,11 +120,19 @@ instance HasDirection Camera Direction where
 radius :: Getter (Exp Sphere) (Exp Float)
 radius = to $ \t -> Exp $ SuccTupIdx (SuccTupIdx ZeroTupIdx) `Prj` t
 
-origin :: Elt a => Getter (Exp (Ray' a)) (Exp (V3 a))
+origin :: Elt a => Getter (Exp (Ray a)) (Exp (V3 a))
 origin = to $ \t -> Exp $ SuccTupIdx ZeroTupIdx `Prj` t
 
 fov :: Getter (Exp Camera) (Exp Int)
 fov = to $ \t -> Exp $ ZeroTupIdx `Prj` t
+
+-- * Pattern synonyms
+--
+-- See the documentation for 'Data.Array.Accelerate' for more information about
+-- these.
+
+pattern Ray' :: Elt a => Exp (V3 a) -> Exp (V3 a) -> Exp (Ray a)
+pattern Ray' o d = Pattern (o, d)
 
 -- * Instances
 -- ** Sphere
@@ -179,20 +187,20 @@ instance Lift Exp Light where
   lift = constant
 
 -- ** Ray
-instance Elt a => Elt (Ray' a) where
-  type EltRepr (Ray' a) = EltRepr (V3 a, V3 a)
+instance Elt a => Elt (Ray a) where
+  type EltRepr (Ray a) = EltRepr (V3 a, V3 a)
   eltType = eltType @(V3 a, V3 a)
   toElt t = let (p, c) = toElt t in Ray p c
   fromElt (Ray p c) = fromElt (p, c)
 
-instance (cst (V3 a)) => IsProduct cst (Ray' a) where
-  type ProdRepr (Ray' a) = ProdRepr (V3 a, V3 a)
+instance (cst (V3 a)) => IsProduct cst (Ray a) where
+  type ProdRepr (Ray a) = ProdRepr (V3 a, V3 a)
   toProd t = let (p, c) = toProd @cst t in Ray p c
   fromProd (Ray p c) = fromProd @cst (p, c)
   prod = prod @cst @(V3 a, V3 a)
 
-instance (Lift Exp a, Elt (Plain a)) => Lift Exp (Ray' a) where
-  type Plain (Ray' a) = Ray' (Plain a)
+instance (Lift Exp a, Elt (Plain a)) => Lift Exp (Ray a) where
+  type Plain (Ray a) = Ray (Plain a)
   lift (Ray o d) = Exp $ Tuple $ NilTup `SnocTup` lift o `SnocTup` lift d
 
 -- ** Camera
