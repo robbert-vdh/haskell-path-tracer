@@ -69,40 +69,40 @@ data Camera = Camera
 
 makeFields ''Scene
 
-class HasPosition t where
-  position :: Getter (Exp t) (Exp Position)
-instance HasPosition Sphere where
+class HasPosition t a | t -> a where
+  position :: Getter (Exp t) (Exp a)
+instance HasPosition Sphere Position where
   position = to $ \t -> Exp $ SuccTupIdx (SuccTupIdx (SuccTupIdx ZeroTupIdx)) `Prj` t
-instance HasPosition Plane where
+instance HasPosition Plane Position where
   position = to $ \t -> Exp $ SuccTupIdx (SuccTupIdx (SuccTupIdx ZeroTupIdx)) `Prj` t
-instance HasPosition Light where
+instance HasPosition Light Position where
   position = to $ \t -> Exp $ SuccTupIdx ZeroTupIdx `Prj` t
-instance HasPosition Camera where
+instance HasPosition Camera Position where
   position = to $ \t -> Exp $ SuccTupIdx (SuccTupIdx ZeroTupIdx) `Prj` t
 
-class HasColor t where
-  color :: Getter (Exp t) (Exp Color)
-instance HasColor Sphere where
+class HasColor t a | t -> a where
+  color :: Getter (Exp t) (Exp a)
+instance HasColor Sphere Color where
   color = to $ \t -> Exp $ SuccTupIdx ZeroTupIdx `Prj` t
-instance HasColor Plane where
+instance HasColor Plane Color where
   color = to $ \t -> Exp $ SuccTupIdx ZeroTupIdx `Prj` t
-instance HasColor Light where
+instance HasColor Light Color where
   color = to $ \t -> Exp $ ZeroTupIdx `Prj` t
 
-class HasSpecularity t where
-  specularity :: Getter (Exp t) (Exp Float)
-instance HasSpecularity Sphere where
+class HasSpecularity t a | t -> a where
+  specularity :: Getter (Exp t) (Exp a)
+instance HasSpecularity Sphere Float where
   specularity = to $ \t -> Exp $ ZeroTupIdx `Prj` t
-instance HasSpecularity Plane where
+instance HasSpecularity Plane Float where
   specularity = to $ \t -> Exp $ ZeroTupIdx `Prj` t
 
-class HasDirection t where
-  direction :: Getter (Exp t) (Exp Direction)
-instance HasDirection Plane where
+class HasDirection t a | t -> a where
+  direction :: Getter (Exp t) (Exp a)
+instance HasDirection Plane Direction where
   direction = to $ \t -> Exp $ SuccTupIdx (SuccTupIdx ZeroTupIdx) `Prj` t
-instance HasDirection Ray where
+instance HasDirection Ray Direction where
   direction = to $ \t -> Exp $ ZeroTupIdx `Prj` t
-instance HasDirection Camera where
+instance HasDirection Camera Direction where
   direction = to $ \t -> Exp $ SuccTupIdx ZeroTupIdx `Prj` t
 
 radius :: Getter (Exp Sphere) (Exp Float)
