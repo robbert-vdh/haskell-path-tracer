@@ -47,10 +47,10 @@ render ::
   -> Acc (Matrix Color)
   -> Acc (Matrix Color)
 render camera screen = zipWith (+) result
-    -- TODO: Do some actual rendering here
   where
+    -- TODO: Do some actual rendering here
     result =
-      map (\(T2 (Ray' _ d) _) -> (d + 1.0) / 1.0) $
+      map (\(T2 (Ray' _ d) _) -> (d + 1.0) / 2.0) $
       primaryRays camera screen
 
 -- | Calculate the origin and directions of the primary rays based on a camera
@@ -63,10 +63,13 @@ primaryRays ::
 primaryRays ~(Camera' cPos cDir (toFloating -> cFov)) = map transform
   where
     verticalFov :: Exp Float
-    verticalFov = 2.0 * atan (tan (cFov / 2.0) * screenAspect)
-    -- TODO: Include the perspective here
+    verticalFov = 2.0 * atan (tan ((cFov * (pi / 180.0)) / 2.0) * screenAspect)
     viewMatrix :: Exp (M44 Float)
-    viewMatrix = lookAt (cPos + cDir) cPos (V3' 0.0 1.0 0.0)
+    viewMatrix =
+      infinitePerspective verticalFov screenAspect 0.01 !*!
+      -- TODO: Right now cDir is a normalized looking direction, but this should
+      --       become a quaternion once we add user input
+      lookAt (cPos + cDir) cPos (V3' 0.0 1.0 0.0)
 
     transform :: Exp (V2 Int, Int) -> Exp (RayF, Int)
     transform (T2 (vecToFloat -> rasterPos) seed) =
@@ -79,14 +82,15 @@ primaryRays ~(Camera' cPos cDir (toFloating -> cFov)) = map transform
           V2' screenX screenY = rasterPos / screenSize * 2.0 + V2' (-1.0) 1.0
 
           nearPoint, farPoint :: Exp (V4 Float)
-          nearPoint = point $ V3' screenX screenY 1.0
-          farPoint = point $ V3' screenX screenY (-1.0)
+          nearPoint = viewMatrix !* point (V3' screenX screenY 1.0)
+          farPoint = viewMatrix !* point (V3' screenX screenY (-1.0))
+          -- TODO: This noramlize is not necesary and is here purely for
+          --       debugging purposes
           rayDir :: Exp (V3 Float)
-          rayDir = normalizePoint $
-            (viewMatrix !* farPoint) - (viewMatrix !* nearPoint)
+          rayDir = normalize $ normalizePoint $ farPoint - nearPoint
 
           ray :: Exp RayF
-          ray = Ray' cPos rayDir
+          ray = Ray' (normalizePoint nearPoint) rayDir
        in T2 ray seed
 
 -- | Convert an integer vector to a float vector. This is only used when

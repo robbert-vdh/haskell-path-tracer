@@ -36,3 +36,25 @@ lookAt eye center up =
     xd = -dot xa eye
     yd = -dot ya eye
     zd = dot za eye
+
+-- | Build a matrix for a symmetric perspective-view frustum with a far plane at
+-- infinite
+infinitePerspective ::
+     Floating a
+  => Exp a -- ^ FOV (y direction, in radians)
+  -> Exp a -- ^ Aspect Ratio
+  -> Exp a -- ^ Near plane
+  -> Exp (M44 a)
+infinitePerspective fovy a n =
+  V4' (V4' x 0 0 0)
+      (V4' 0 y 0 0)
+      (V4' 0 0 (-1) w)
+      (V4' 0 0 (-1) 0)
+  where
+    t = n * tan (fovy / 2)
+    b = -t
+    l = b * a
+    r = t * a
+    x = (2 * n) / (r - l)
+    y = (2 * n) / (t - b)
+    w = -2 * n
