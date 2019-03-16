@@ -11,8 +11,8 @@
 
 module Scene where
 
-import Control.Lens hiding (transform)
 import Data.Array.Accelerate
+import Data.Array.Accelerate.Control.Lens
 import Data.Array.Accelerate.Data.Functor
 import Data.Array.Accelerate.Linear
 import Data.Array.Accelerate.Array.Sugar (Elt)
@@ -20,6 +20,7 @@ import Data.Array.Accelerate.Array.Sugar (Elt)
 import qualified Prelude as P
 
 import Scene.Objects
+import Data.Array.Accelerate.Linear.Projection
 
 -- | The dimensions of the screen. These are hard coded for efficiency's sake
 -- even though the window could be resizable with minor adjustments.
@@ -38,7 +39,7 @@ screenSize =
 -- | Render a single sample, combining the previous results with the newly
 -- generated sample.
 render ::
-     Camera
+     Exp Camera
   -> Acc (Matrix (V2 Int, Int))
   -> Acc (Matrix Color)
   -> Acc (Matrix Color)
@@ -52,10 +53,12 @@ render camera screen = zipWith (+) result
 -- | Calculate the origin and directions of the primary rays based on a camera
 -- and a matrix of screen pixel positions. These positions should be in the
 -- format @V2 <0 .. screenWidth> <0 .. screenHeight>@.
-primaryRays :: Camera -> Acc (Matrix (V2 Int, Int)) -> Acc (Matrix (RayF, Int))
-primaryRays camera = map transform
+primaryRays :: Exp Camera -> Acc (Matrix (V2 Int, Int)) -> Acc (Matrix (RayF, Int))
+primaryRays (Camera' cPos cDir cFov) = map transform
   where
-    viewMatrix = undefined
+    -- TODO: Include the perspective here
+    viewMatrix :: Exp (M44 Float)
+    viewMatrix = lookAt (cPos + cDir) cPos (V3' 0.0 1.0 0.0)
     transform :: Exp (V2 Int, Int) -> Exp (RayF, Int)
     transform (T2 (vecToFloat -> rasterPos) seed) =
       let -- Screen space is the space where both X and Y coordinates lie within

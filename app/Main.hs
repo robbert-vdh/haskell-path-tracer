@@ -198,5 +198,5 @@ screenShape :: Z :. Int :. Int
 screenShape = Z :. fromIntegral screenHeight :. fromIntegral screenWidth
 
 -- TODO: Replace this with some actual value
-theCamera :: Camera
+theCamera :: A.Exp Camera
 theCamera = undefined
