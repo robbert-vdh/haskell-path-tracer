@@ -134,6 +134,9 @@ fov = to $ \t -> Exp $ ZeroTupIdx `Prj` t
 pattern Ray' :: Elt a => Exp (V3 a) -> Exp (V3 a) -> Exp (Ray a)
 pattern Ray' o d = Pattern (o, d)
 
+pattern Camera' :: Exp Position -> Exp Direction -> Exp Int -> Exp Camera
+pattern Camera' p d f = Pattern (p, d, f)
+
 -- * Instances
 -- ** Sphere
 instance Elt Sphere where
