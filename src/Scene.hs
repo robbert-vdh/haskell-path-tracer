@@ -32,8 +32,7 @@ screenHeight = 600
 -- between rasterization and screen spaces.
 screenSize :: Exp (V2 Float)
 screenSize =
-  constant $
-  V2 (P.fromIntegral screenWidth) (P.fromIntegral $ negate screenHeight)
+  V2' (P.fromIntegral screenWidth) (P.fromIntegral $ negate screenHeight)
 
 -- | Render a single sample, combining the previous results with the newly
 -- generated sample.
@@ -66,8 +65,7 @@ primaryRays ~(Camera' cPos cDir cFov) = map transform
           -- inverted during the computation. This has already been accounted
           -- for in 'screenSize', hence why the Y-axis value gets increased by
           -- two.
-          V2' screenX screenY =
-            rasterPos / screenSize * 2.0 + constant (V2 (-1.0) 1.0)
+          V2' screenX screenY = rasterPos / screenSize * 2.0 + V2' (-1.0) 1.0
 
           nearPoint, farPoint :: Exp (V4 Float)
           nearPoint = point $ V3' screenX screenY 1.0
