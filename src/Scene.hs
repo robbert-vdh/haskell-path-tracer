@@ -43,9 +43,11 @@ render ::
   -> Acc (Matrix Color)
   -> Acc (Matrix Color)
 render camera screen = zipWith (+) result
-  where
     -- TODO: Do some actual rendering here
-    result = map (\(T2 (Ray' o _) _) -> o) $ primaryRays camera screen
+  where
+    result =
+      map (\(T2 (Ray' _ d) _) -> (d + 1.0) / 1.0) $
+      primaryRays camera screen
 
 -- | Calculate the origin and directions of the primary rays based on a camera
 -- and a matrix of screen pixel positions. These positions should be in the
