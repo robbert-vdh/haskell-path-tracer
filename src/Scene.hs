@@ -12,7 +12,6 @@
 module Scene where
 
 import Data.Array.Accelerate
-import Data.Array.Accelerate.Control.Lens
 import Data.Array.Accelerate.Data.Functor
 import Data.Array.Accelerate.Linear
 import Data.Array.Accelerate.Array.Sugar (Elt)
@@ -54,7 +53,7 @@ render camera screen = zipWith (+) result
 -- and a matrix of screen pixel positions. These positions should be in the
 -- format @V2 <0 .. screenWidth> <0 .. screenHeight>@.
 primaryRays :: Exp Camera -> Acc (Matrix (V2 Int, Int)) -> Acc (Matrix (RayF, Int))
-primaryRays (Camera' cPos cDir cFov) = map transform
+primaryRays ~(Camera' cPos cDir cFov) = map transform
   where
     -- TODO: Include the perspective here
     viewMatrix :: Exp (M44 Float)
@@ -67,14 +66,18 @@ primaryRays (Camera' cPos cDir cFov) = map transform
           -- inverted during the computation. This has already been accounted
           -- for in 'screenSize', hence why the Y-axis value gets increased by
           -- two.
-          screenPos = rasterPos / screenSize * 2.0 + constant (V2 (-1.0) 1.0)
+          V2' screenX screenY =
+            rasterPos / screenSize * 2.0 + constant (V2 (-1.0) 1.0)
 
-          -- TODO: Replace. This is an example for how to create rays and how to
-          --       lift them to expressions.
-          worldPos :: Exp (V3 Float)
-          worldPos = V3' (screenPos ^. _x) (screenPos ^. _y) 0.0
+          nearPoint, farPoint :: Exp (V4 Float)
+          nearPoint = point $ V3' screenX screenY 1.0
+          farPoint = point $ V3' screenX screenY (-1.0)
+          rayDir :: Exp (V3 Float)
+          rayDir = normalizePoint $
+            (viewMatrix !* farPoint) - (viewMatrix !* nearPoint)
+
           ray :: Exp RayF
-          ray = Ray' worldPos worldPos
+          ray = Ray' cPos rayDir
        in T2 ray seed
 
 -- | Convert an integer vector to a float vector. This is only used when

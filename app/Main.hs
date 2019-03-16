@@ -22,6 +22,7 @@ import SDL
 import Lib
 import Scene
 import Scene.Objects (Color, Camera)
+import Scene.World (getStartCamera)
 import TH
 
 data Result = Result
@@ -199,4 +200,4 @@ screenShape = Z :. fromIntegral screenHeight :. fromIntegral screenWidth
 
 -- TODO: Replace this with some actual value
 theCamera :: A.Exp Camera
-theCamera = undefined
+theCamera = A.constant getStartCamera
