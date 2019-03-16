@@ -27,6 +27,11 @@ screenWidth, screenHeight :: Int32
 screenWidth = 800
 screenHeight = 600
 
+-- | The aspect ratio of the output. Used in the FOV and perspective
+-- calculations.
+screenAspect :: Exp Float
+screenAspect = P.fromIntegral screenWidth / P.fromIntegral screenHeight
+
 -- | The dimensions of the screen as a float vector. Note that the screen height
 -- has been inverted here as the @y@ axis changes orientation when converting
 -- between rasterization and screen spaces.
@@ -51,12 +56,18 @@ render camera screen = zipWith (+) result
 -- | Calculate the origin and directions of the primary rays based on a camera
 -- and a matrix of screen pixel positions. These positions should be in the
 -- format @V2 <0 .. screenWidth> <0 .. screenHeight>@.
-primaryRays :: Exp Camera -> Acc (Matrix (V2 Int, Int)) -> Acc (Matrix (RayF, Int))
-primaryRays ~(Camera' cPos cDir cFov) = map transform
+primaryRays ::
+     Exp Camera
+  -> Acc (Matrix (V2 Int, Int))
+  -> Acc (Matrix (RayF, Int))
+primaryRays ~(Camera' cPos cDir (toFloating -> cFov)) = map transform
   where
+    verticalFov :: Exp Float
+    verticalFov = 2.0 * atan (tan (cFov / 2.0) * screenAspect)
     -- TODO: Include the perspective here
     viewMatrix :: Exp (M44 Float)
     viewMatrix = lookAt (cPos + cDir) cPos (V3' 0.0 1.0 0.0)
+
     transform :: Exp (V2 Int, Int) -> Exp (RayF, Int)
     transform (T2 (vecToFloat -> rasterPos) seed) =
       let -- Screen space is the space where both X and Y coordinates lie within
