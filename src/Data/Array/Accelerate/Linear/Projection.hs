@@ -1,9 +1,12 @@
 {-# LANGUAGE FlexibleContexts #-}
--- | Functions from 'Linear.Projection' lifted to Accelerate terms. These
--- functions are simply copy pasted from the respective functions but with their
--- terms lifted to 'Exp's. This is needed as the 'Epsilon' type classes from
--- 'Linear.Epsilon' and 'Data.Array.Accelerate.Linear.Epsilon' are not
--- compatible, and as such we can't make use of the `liftN` functions.
+
+-- | Functions from 'Linear.Projection' lifted to Accelerate terms.
+--
+-- These function definitions are copied directly from their corresponding
+-- functions in 'Linear.Projection' but with their terms lifted to 'Exp's. This
+-- is needed as the 'Epsilon' type classes from 'Linear.Epsilon' and
+-- 'Data.Array.Accelerate.Linear.Epsilon' are not compatible, and as such we
+-- can't make use of the `liftN` functions.
 
 module Data.Array.Accelerate.Linear.Projection where
 
