@@ -1,4 +1,5 @@
 {-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE ExistentialQuantification #-}
 
 -- | This module contains the main entry point the for the Accelerate program.
 --
@@ -99,6 +100,7 @@ vecToFloat ::
      (Functor f, Elt (f Int), Elt (f Float)) => Exp (f Int) -> Exp (f Float)
 vecToFloat = fmap toFloating
 
+-- ** Single ray, multiple objects
 -- | A function which calculates the resulting color given a bounce limit,
 -- a scene and a ray.
 traceRay :: Int -> Acc Scene -> Exp RayF -> Exp Color
@@ -111,3 +113,33 @@ traceRay limit scene (Ray' o d) = go limit o d
     -- itersects with anything in the scene. If it does calculate reflection
     -- and recursivly call this function. If nothing gets hit, return black
     go bounces pos dir = undefined
+
+-- | Find the nearest hit for a ray given a array of objects
+castRay :: forall obj. Elt obj
+    => (Exp obj -> Exp RayF -> Exp(Bool, Float))
+    -> Exp obj           -- Dummy object, returned if no hit (maybe does not exist)
+    -> Acc (Vector obj)  -- the list of objects (must be the same type)
+    -> Exp RayF          -- Ray with start and direction
+    -> Exp (Bool, Float, obj) -- Return hit?, distance and which object has been hit
+castRay = undefined
+
+-- ** Single ray, single object
+-- | Get intersection point, normal, color and shine for a sphere hit.
+hitSphere :: Exp Sphere -> Exp Float -> Exp RayF -> Exp (Position, Direction, Color, Float)
+hitSphere = undefined
+
+-- | Get the intersection point, nromal, color and shine of a plane hit.
+hitPlane :: Exp Plane -> Exp Float -> Exp RayF -> Exp (Position, Direction, Color, Float)
+hitPlane = undefined
+
+-- | Distance to a Spere if it intersects, bool says if there is a hit, float the distance.
+distanceToSphere :: Exp Sphere -> Exp RayF -> Exp (Bool, Float)
+distanceToSphere = undefined
+
+-- | Distance to a Plane if it intersects, bool says if there is a hit, float the distance.
+distanceToPlane :: Exp Plane -> Exp RayF -> Exp (Bool, Float)
+distanceToPlane = undefined
+
+-- | Max possible value for a float, usefull as distance if there is not hit
+infinite :: Exp Float
+infinite = encodeFloat 16777215 104
