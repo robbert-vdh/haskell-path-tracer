@@ -87,11 +87,16 @@ primaryRays ~(Camera' cPos cDir (toFloating -> cFov)) = map transform
           farPoint = viewMatrix !* point (V3' screenX screenY (-1.0))
           -- TODO: This noramlize is not necesary and is here purely for
           --       debugging purposes
+
+          nearPointV3, farPointV3 :: Exp (V3 Float)
+          nearPointV3 = normalizePoint nearPoint
+          farPointV3 = normalizePoint farPoint
+
           rayDir :: Exp (V3 Float)
-          rayDir = normalize $ normalizePoint $ farPoint - nearPoint
+          rayDir = normalize $ (nearPointV3 - farPointV3)
 
           ray :: Exp RayF
-          ray = Ray' (normalizePoint nearPoint) rayDir
+          ray = Ray' nearPointV3 rayDir
        in T2 ray seed
 
 -- | Convert an integer vector to a float vector. This is only used when
@@ -128,7 +133,7 @@ castRay = undefined
 hitSphere :: Exp Sphere -> Exp Float -> Exp RayF -> Exp (Position, Direction, Color, Float)
 hitSphere = undefined
 
--- | Get the intersection point, nromal, color and shine of a plane hit.
+-- | Get the intersection point, normal, color and shine of a plane hit.
 hitPlane :: Exp Plane -> Exp Float -> Exp RayF -> Exp (Position, Direction, Color, Float)
 hitPlane = undefined
 
