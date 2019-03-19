@@ -46,12 +46,14 @@ primaryRays ::
 primaryRays ~(Camera' cPos cDir (toFloating -> cFov)) = map transform
   where
     verticalFov :: Exp Float
+    -- TODO: This value is too high
     verticalFov = 2.0 * atan (tan ((cFov * (pi / 180.0)) / 2.0) * screenAspect)
     viewMatrix :: Exp (M44 Float)
     viewMatrix =
       infinitePerspective verticalFov screenAspect 0.01 !*!
       -- TODO: Right now cDir is a normalized looking direction, but this should
       --       become a quaternion once we add user input
+      -- TODO: THis only works for cPos = (0, 0, 0)
       lookAt (cPos + cDir) cPos (V3' 0.0 1.0 0.0)
 
     transform :: Exp (V2 Int, Int) -> Exp (RayF, Int)
@@ -67,15 +69,11 @@ primaryRays ~(Camera' cPos cDir (toFloating -> cFov)) = map transform
           nearPoint, farPoint :: Exp (V4 Float)
           nearPoint = normalize $ viewMatrix !* point (V3' screenX screenY 1.0)
           farPoint = normalize $ viewMatrix !* point (V3' screenX screenY (-1.0))
+
           -- TODO: This noramlize is not necesary and is here purely for
           --       debugging purposes
-
-          nearPointV3, farPointV3 :: Exp (V3 Float)
-          nearPointV3 = normalizePoint nearPoint
-          farPointV3 = normalizePoint farPoint
-
           rayDir :: Exp (V3 Float)
-          rayDir = normalize $ fromHomogeneous $ farPoint - nearPoint
+          rayDir = normalize $ fromHomogeneous $ nearPoint - farPoint
 
           ray :: Exp RayF
           ray = Ray' (fromHomogeneous nearPoint) rayDir
