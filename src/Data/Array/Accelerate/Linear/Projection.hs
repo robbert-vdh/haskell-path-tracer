@@ -37,6 +37,32 @@ lookAt eye center up =
     yd = -dot ya eye
     zd = dot za eye
 
+-- | Build a matrix for a symmetric perspective-view frustum
+perspective ::
+     Floating a
+  => Exp a -- ^ FOV (y direction, in radians)
+  -> Exp a -- ^ Aspect ratio
+  -> Exp a -- ^ Near plane
+  -> Exp a -- ^ Far plane
+  -> Exp (M44 a)
+perspective fovy aspect near far =
+  V4' (V4' x 0 0 0)
+      (V4' 0 y 0 0)
+      (V4' 0 0 z w)
+      (V4' 0 0 (-1) 0)
+  where
+    tanHalfFovy = tan $ fovy / 2
+    x = 1 / (aspect * tanHalfFovy)
+    y = 1 / tanHalfFovy
+    fpn = far + near
+    fmn = far - near
+    oon = 0.5 / near
+    oof = 0.5 / far
+    -- z = 1 / (near/fpn - far/fpn) -- would be better by .5 bits
+    z = -fpn / fmn
+    w = 1 / (oof - oon) -- 13 bits error reduced to 0.17
+    -- w = -(2 * far * near) / fmn
+
 -- | Build a matrix for a symmetric perspective-view frustum with a far plane at
 -- infinite
 infinitePerspective ::
