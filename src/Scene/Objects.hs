@@ -40,19 +40,19 @@ data Sphere = Sphere
   , _sphereRadius :: Float
   , _sphereColor :: Color
   , _sphereSpecularity :: Float
-  } deriving (Prelude.Eq, Show, Typeable, Generic, Elt)
+  } deriving (Prelude.Eq, Show, Typeable, Generic, Elt, IsProduct cst)
 
 data Plane = Plane
   { _planePosition :: Position
   , _planeDirection :: Direction
   , _planeColor :: Color
   , _planeSpecularity :: Float
-  } deriving (Prelude.Eq, Show, Typeable, Generic, Elt)
+  } deriving (Prelude.Eq, Show, Typeable, Generic, Elt, IsProduct cst)
 
 data Light = Light
   { _lightPosition :: Position
   , _lightColor :: Color
-  } deriving (Prelude.Eq, Show, Typeable, Generic, Elt)
+  } deriving (Prelude.Eq, Show, Typeable, Generic, Elt, IsProduct cst)
 
 -- | Any ray that is cast through the scene. This is defined as a type alias as
 -- the 'Ray' has to be polymorphic in order to to be able to lift a @Ray (Exp
@@ -61,13 +61,13 @@ type RayF = Ray Float
 data Ray a = Ray
   { _rayOrigin :: V3 a
   , _rayDirection :: V3 a
-  } deriving (Prelude.Eq, Show, Typeable, Generic, Elt)
+  } deriving (Prelude.Eq, Show, Typeable, Generic, Elt, IsProduct cst)
 
 data Camera = Camera
   { _cameraPosition :: Position
   , _cameraDirection :: Direction
   , _cameraFov :: Int
-  } deriving (Prelude.Eq, Show, Typeable, Generic, Elt)
+  } deriving (Prelude.Eq, Show, Typeable, Generic, Elt, IsProduct cst)
 
 -- * Lenses
 --
@@ -137,12 +137,9 @@ pattern Camera' p d f = Pattern (p, d, f)
 
 -- * Instances
 --
--- For our data types we can simply derive most of these or use the default
--- implementations.
+-- The implementations for 'Elt' and 'IsProduct' are derived through 'Generic'.
 
 -- ** Sphere
-
-instance (cst Float, cst (V3 Float)) => IsProduct cst Sphere
 
 instance Lift Exp Sphere where
   type Plain Sphere = Sphere
@@ -150,15 +147,11 @@ instance Lift Exp Sphere where
 
 -- ** Plane
 
-instance (cst Float, cst (V3 Float)) => IsProduct cst Plane
-
 instance Lift Exp Plane where
   type Plain Plane = Plane
   lift = constant
 
 -- ** Light
-
-instance (cst (V3 Float)) => IsProduct cst Light
 
 instance Lift Exp Light where
   type Plain Light = Light
@@ -166,15 +159,11 @@ instance Lift Exp Light where
 
 -- ** Ray
 
-instance (cst (V3 a)) => IsProduct cst (Ray a)
-
 instance (Lift Exp a, Elt (Plain a)) => Lift Exp (Ray a) where
   type Plain (Ray a) = Ray (Plain a)
   lift (Ray o d) = Exp $ Tuple $ NilTup `SnocTup` lift o `SnocTup` lift d
 
 -- ** Camera
-
-instance (cst Int, cst (V3 Float)) => IsProduct cst Camera
 
 instance Lift Exp Camera where
   type Plain Camera = Camera
