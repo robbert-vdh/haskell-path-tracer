@@ -15,6 +15,10 @@ import Scene.World (getStartCamera)
 
 -- * Functions
 
+-- | Transform homogeneous coordinates back into regular vectors.
+fromHomogeneous :: Elt a => Exp (V4 a) -> Exp (V3 a)
+fromHomogeneous ~(V4' x y z _) = V3' x y z
+
 -- | Convert an integer vector to a float vector. This is only used when
 -- converting between rasterization and world spaces.
 vecToFloat ::

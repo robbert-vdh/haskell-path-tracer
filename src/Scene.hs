@@ -13,11 +13,10 @@
 module Scene where
 
 import Data.Array.Accelerate
-import Data.Array.Accelerate.Data.Functor
 import Data.Array.Accelerate.Linear
 import Data.Array.Accelerate.Array.Sugar (Elt)
 
-import qualified Prelude as P
+import qualified Prelude as P ()
 
 import Scene.Objects
 import Data.Array.Accelerate.Linear.Projection
@@ -66,8 +65,8 @@ primaryRays ~(Camera' cPos cDir (toFloating -> cFov)) = map transform
           V2' screenX screenY = rasterPos / screenSize * 2.0 + V2' (-1.0) 1.0
 
           nearPoint, farPoint :: Exp (V4 Float)
-          nearPoint = viewMatrix !* point (V3' screenX screenY 1.0)
-          farPoint = viewMatrix !* point (V3' screenX screenY (-1.0))
+          nearPoint = normalize $ viewMatrix !* point (V3' screenX screenY 1.0)
+          farPoint = normalize $ viewMatrix !* point (V3' screenX screenY (-1.0))
           -- TODO: This noramlize is not necesary and is here purely for
           --       debugging purposes
 
@@ -76,17 +75,11 @@ primaryRays ~(Camera' cPos cDir (toFloating -> cFov)) = map transform
           farPointV3 = normalizePoint farPoint
 
           rayDir :: Exp (V3 Float)
-          rayDir = normalize $ (nearPointV3 - farPointV3)
+          rayDir = normalize $ fromHomogeneous $ farPoint - nearPoint
 
           ray :: Exp RayF
-          ray = Ray' nearPointV3 rayDir
+          ray = Ray' (fromHomogeneous nearPoint) rayDir
        in T2 ray seed
-
--- | Convert an integer vector to a float vector. This is only used when
--- converting between rasterization and world spaces.
-vecToFloat ::
-     (Functor f, Elt (f Int), Elt (f Float)) => Exp (f Int) -> Exp (f Float)
-vecToFloat = fmap toFloating
 
 -- ** Single ray, multiple objects
 -- | A function which calculates the resulting color given a bounce limit,
