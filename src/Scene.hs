@@ -21,24 +21,7 @@ import qualified Prelude as P
 
 import Scene.Objects
 import Data.Array.Accelerate.Linear.Projection
-
--- | The dimensions of the screen. These are hard coded for efficiency's sake
--- even though the window could be resizable with minor adjustments.
-screenWidth, screenHeight :: Int32
-screenWidth = 800
-screenHeight = 600
-
--- | The aspect ratio of the output. Used in the FOV and perspective
--- calculations.
-screenAspect :: Exp Float
-screenAspect = P.fromIntegral screenWidth / P.fromIntegral screenHeight
-
--- | The dimensions of the screen as a float vector. Note that the screen height
--- has been inverted here as the @y@ axis changes orientation when converting
--- between rasterization and screen spaces.
-screenSize :: Exp (V2 Float)
-screenSize =
-  V2' (P.fromIntegral screenWidth) (P.fromIntegral $ negate screenHeight)
+import Util
 
 -- | Render a single sample, combining the previous results with the newly
 -- generated sample.

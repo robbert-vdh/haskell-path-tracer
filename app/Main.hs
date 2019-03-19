@@ -24,6 +24,7 @@ import Scene
 import Scene.Objects (Color, Camera)
 import Scene.World (getStartCamera)
 import TH
+import Util
 
 data Result = Result
   { _texture :: A.Matrix Color
@@ -181,23 +182,3 @@ screenQuad =
      , V2 (-1.0) 1.0
      , V2 1.0 1.0
      ] :: [V2 Float])
-
--- | The output matrix initialized with all zero values. This is used during the
--- initialization and after moving the camera.
-initialOutput :: A.Matrix Color
-initialOutput = A.fromFunction screenShape $ const $ V3 0.0 0.0 0.0
-
--- | A matrix containing coordinates for every pixel on the screen. This is used
--- to cast the actual rays.
---
--- TODO: Add RNG seeds here
-screenPixels :: (A.Matrix (V2 Int, Int))
-screenPixels = A.fromFunction screenShape $ \(Z :. y :. x) -> (V2 x y, 1)
-
--- | The size of the output as an array shape.
-screenShape :: Z :. Int :. Int
-screenShape = Z :. fromIntegral screenHeight :. fromIntegral screenWidth
-
--- TODO: Replace this with some actual value
-theCamera :: A.Exp Camera
-theCamera = A.constant getStartCamera
