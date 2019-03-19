@@ -7,7 +7,6 @@ module Main where
 import Control.Concurrent
 import Control.Lens
 import Control.Monad (unless)
-import Data.Array.Accelerate ((:.)(..), Z(..))
 import qualified Data.Array.Accelerate as A
 import qualified Data.Array.Accelerate.IO.Data.Vector.Storable as A
 import qualified Data.Text as T
@@ -21,8 +20,7 @@ import SDL
 
 import Lib
 import Scene
-import Scene.Objects (Color, Camera)
-import Scene.World (getStartCamera)
+import Scene.Objects (Color)
 import TH
 import Util
 
