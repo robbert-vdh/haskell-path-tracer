@@ -1,8 +1,10 @@
-{-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
@@ -20,13 +22,6 @@ import Data.Array.Accelerate.Smart
 import Data.Typeable
 import qualified Prelude
 
--- TODO: There are a few things that could possible simplify things for us that
---       we have not tried yet:
---
---       - Deriving (Generic, Elt, IsTuple, etc.)
---       - Using the default implementations for Elt and IsProduct (not
---         necessary with the above)
-
 -- * Objects
 
 type Position = V3 Float
@@ -34,30 +29,30 @@ type Direction = V3 Float
 type Color = V3 Float
 type Noraml = (Position, Direction)
 
+data Scene = Scene
+  { _sceneSpheres :: A.Vector Sphere
+  , _scenePlanes :: A.Vector Plane
+  , _sceneLights :: A.Vector Light
+  } deriving (Typeable)
+
 data Sphere = Sphere
   { _spherePosition :: Position
   , _sphereRadius :: Float
   , _sphereColor :: Color
   , _sphereSpecularity :: Float
-  } deriving (Prelude.Eq, Show, Typeable)
+  } deriving (Prelude.Eq, Show, Typeable, Generic, Elt)
 
 data Plane = Plane
   { _planePosition :: Position
   , _planeDirection :: Direction
   , _planeColor :: Color
   , _planeSpecularity :: Float
-  } deriving (Prelude.Eq, Show, Typeable)
+  } deriving (Prelude.Eq, Show, Typeable, Generic, Elt)
 
 data Light = Light
   { _lightPosition :: Position
   , _lightColor :: Color
-  } deriving (Prelude.Eq, Show, Typeable)
-
-data Scene = Scene
-  { _sceneSpheres :: A.Vector Sphere
-  , _scenePlanes :: A.Vector Plane
-  , _sceneLights :: A.Vector Light
-  } deriving Typeable
+  } deriving (Prelude.Eq, Show, Typeable, Generic, Elt)
 
 -- | Any ray that is cast through the scene. This is defined as a type alias as
 -- the 'Ray' has to be polymorphic in order to to be able to lift a @Ray (Exp
@@ -66,18 +61,21 @@ type RayF = Ray Float
 data Ray a = Ray
   { _rayOrigin :: V3 a
   , _rayDirection :: V3 a
-  } deriving (Prelude.Eq, Show, Typeable)
+  } deriving (Prelude.Eq, Show, Typeable, Generic, Elt)
 
 data Camera = Camera
   { _cameraPosition :: Position
   , _cameraDirection :: Direction
   , _cameraFov :: Int
-  } deriving (Prelude.Eq, Show, Typeable)
+  } deriving (Prelude.Eq, Show, Typeable, Generic, Elt)
 
 -- * Lenses
 --
 -- Since Sphere, Plane and Light do not have a type parameter we can't make use
 -- 'liftLens' or `unlift`, so we'll just define some simple getters ourselves.
+--
+-- ** TODO: Decide on whether we actually need these now that pattern synonyms
+--          are a thing
 
 makeFields ''Scene
 
@@ -138,86 +136,45 @@ pattern Camera' :: Exp Position -> Exp Direction -> Exp Int -> Exp Camera
 pattern Camera' p d f = Pattern (p, d, f)
 
 -- * Instances
--- ** Sphere
-instance Elt Sphere where
-  type EltRepr Sphere = EltRepr (Position, Float, Color, Float)
-  eltType = eltType @(Position, Float, Color, Float)
-  toElt t = let (p, r, c, s) = toElt t in Sphere p r c s
-  fromElt (Sphere p r c s) = fromElt (p, r, c, s)
+--
+-- For our data types we can simply derive most of these or use the default
+-- implementations.
 
-instance (cst Float, cst (V3 Float)) => IsProduct cst Sphere where
-  type ProdRepr Sphere = ProdRepr (Position, Float, Color, Float)
-  toProd t = let (p, r, c, s) = toProd @cst t in Sphere p r c s
-  fromProd (Sphere p r c s) = fromProd @cst (p, r, c, s)
-  prod = prod @cst @(Position, Float, Color, Float)
+-- ** Sphere
+
+instance (cst Float, cst (V3 Float)) => IsProduct cst Sphere
 
 instance Lift Exp Sphere where
   type Plain Sphere = Sphere
   lift = constant
 
 -- ** Plane
-instance Elt Plane where
-  type EltRepr Plane = EltRepr (Position, Direction, Color, Float)
-  eltType = eltType @(Position, Direction, Color, Float)
-  toElt t = let (p, r, c, s) = toElt t in Plane p r c s
-  fromElt (Plane p r c s) = fromElt (p, r, c, s)
 
-instance (cst Float, cst (V3 Float)) => IsProduct cst Plane where
-  type ProdRepr Plane = ProdRepr (Position, Direction, Color, Float)
-  toProd t = let (p, r, c, s) = toProd @cst t in Plane p r c s
-  fromProd (Plane p r c s) = fromProd @cst (p, r, c, s)
-  prod = prod @cst @(Position, Direction, Color, Float)
+instance (cst Float, cst (V3 Float)) => IsProduct cst Plane
 
 instance Lift Exp Plane where
   type Plain Plane = Plane
   lift = constant
 
 -- ** Light
-instance Elt Light where
-  type EltRepr Light = EltRepr (Position, Color)
-  eltType = eltType @(Position, Color)
-  toElt t = let (p, c) = toElt t in Light p c
-  fromElt (Light p c) = fromElt (p, c)
 
-instance (cst (V3 Float)) => IsProduct cst Light where
-  type ProdRepr Light = ProdRepr (Position, Color)
-  toProd t = let (p, c) = toProd @cst t in Light p c
-  fromProd (Light p c) = fromProd @cst (p, c)
-  prod = prod @cst @(Position, Color)
+instance (cst (V3 Float)) => IsProduct cst Light
 
 instance Lift Exp Light where
   type Plain Light = Light
   lift = constant
 
 -- ** Ray
-instance Elt a => Elt (Ray a) where
-  type EltRepr (Ray a) = EltRepr (V3 a, V3 a)
-  eltType = eltType @(V3 a, V3 a)
-  toElt t = let (p, c) = toElt t in Ray p c
-  fromElt (Ray p c) = fromElt (p, c)
 
-instance (cst (V3 a)) => IsProduct cst (Ray a) where
-  type ProdRepr (Ray a) = ProdRepr (V3 a, V3 a)
-  toProd t = let (p, c) = toProd @cst t in Ray p c
-  fromProd (Ray p c) = fromProd @cst (p, c)
-  prod = prod @cst @(V3 a, V3 a)
+instance (cst (V3 a)) => IsProduct cst (Ray a)
 
 instance (Lift Exp a, Elt (Plain a)) => Lift Exp (Ray a) where
   type Plain (Ray a) = Ray (Plain a)
   lift (Ray o d) = Exp $ Tuple $ NilTup `SnocTup` lift o `SnocTup` lift d
 
 -- ** Camera
-instance Elt Camera where
-  type EltRepr Camera = EltRepr (Position, Direction, Int)
-  eltType = eltType @(Position, Direction, Int)
-  toElt t = let (p, r, f) = toElt t in Camera p r f
-  fromElt (Camera p r f) = fromElt (p, r, f)
 
-instance (cst Int, cst (V3 Float)) => IsProduct cst Camera where
-  type ProdRepr Camera = ProdRepr (Position, Direction, Int)
-  toProd t = let (p, r, f) = toProd @cst t in Camera p r f
-  fromProd (Camera p r f) = fromProd @cst (p, r, f)
-  prod = prod @cst @(Position, Direction, Int)
+instance (cst Int, cst (V3 Float)) => IsProduct cst Camera
 
 instance Lift Exp Camera where
   type Plain Camera = Camera
