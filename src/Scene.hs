@@ -14,6 +14,7 @@ module Scene where
 
 import Data.Array.Accelerate
 import Data.Array.Accelerate.Linear
+import Data.Array.Accelerate.Data.Maybe
 import Data.Array.Accelerate.Array.Sugar (Elt)
 
 import qualified Prelude as P ()
@@ -98,27 +99,26 @@ traceRay limit scene (Ray' o d) = go limit o d
 -- | Find the nearest hit for a ray given a array of objects
 castRay :: forall obj. Elt obj
     => (Exp obj -> Exp RayF -> Exp(Bool, Float))
-    -> Exp obj           -- Dummy object, returned if no hit (maybe does not exist)
     -> Acc (Vector obj)  -- the list of objects (must be the same type)
     -> Exp RayF          -- Ray with start and direction
-    -> Exp (Bool, Float, obj) -- Return hit?, distance and which object has been hit
+    -> Exp (Maybe (Float, obj)) -- Return hit?, distance and which object has been hit
 castRay = undefined
 
 -- ** Single ray, single object
--- | Get intersection point, normal, color and shine for a sphere hit.
+-- | Get intersection point, normal, color and shine for a sphere hit. Assumes there is a hit
 hitSphere :: Exp Sphere -> Exp Float -> Exp RayF -> Exp (Position, Direction, Color, Float)
 hitSphere = undefined
 
--- | Get the intersection point, normal, color and shine of a plane hit.
+-- | Get the intersection point, normal, color and shine of a plane hit. Assumes there is a hit
 hitPlane :: Exp Plane -> Exp Float -> Exp RayF -> Exp (Position, Direction, Color, Float)
 hitPlane = undefined
 
--- | Distance to a Spere if it intersects, bool says if there is a hit, float the distance.
-distanceToSphere :: Exp Sphere -> Exp RayF -> Exp (Bool, Float)
+-- | Distance to a Spere if it intersects, returns a maybe float for the distance.
+distanceToSphere :: Exp Sphere -> Exp RayF -> Exp (Maybe Float)
 distanceToSphere = undefined
 
--- | Distance to a Plane if it intersects, bool says if there is a hit, float the distance.
-distanceToPlane :: Exp Plane -> Exp RayF -> Exp (Bool, Float)
+-- | Distance to a Plane if it intersects, returns a maybe float the distance.
+distanceToPlane :: Exp Plane -> Exp RayF -> Exp (Maybe Float)
 distanceToPlane = undefined
 
 -- | Max possible value for a float, usefull as distance if there is not hit
