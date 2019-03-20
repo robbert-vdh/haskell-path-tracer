@@ -97,6 +97,9 @@ traceRay limit scene (Ray' o d) = go limit o d
     go bounces pos dir = undefined
 
 -- | Find the nearest hit for a ray given a array of objects
+--
+-- we can map distanceTo{Sphere,Plane} on all opjects and use the `justs` function to
+-- extract the Just Exps.
 castRay :: forall obj. Elt obj
     => (Exp obj -> Exp RayF -> Exp(Bool, Float))
     -> Acc (Vector obj)  -- the list of objects (must be the same type)
