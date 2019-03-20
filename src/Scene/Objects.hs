@@ -139,31 +139,21 @@ pattern Camera' p d f = Pattern (p, d, f)
 --
 -- The implementations for 'Elt' and 'IsProduct' are derived through 'Generic'.
 
--- ** Sphere
-
 instance Lift Exp Sphere where
   type Plain Sphere = Sphere
   lift = constant
-
--- ** Plane
 
 instance Lift Exp Plane where
   type Plain Plane = Plane
   lift = constant
 
--- ** Light
-
 instance Lift Exp Light where
   type Plain Light = Light
   lift = constant
 
--- ** Ray
-
 instance (Lift Exp a, Elt (Plain a)) => Lift Exp (Ray a) where
   type Plain (Ray a) = Ray (Plain a)
   lift (Ray o d) = Exp $ Tuple $ NilTup `SnocTup` lift o `SnocTup` lift d
-
--- ** Camera
 
 instance Lift Exp Camera where
   type Plain Camera = Camera
