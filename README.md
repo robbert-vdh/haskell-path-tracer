@@ -40,3 +40,9 @@ resources for implementing all of this.
   also contains a lot of easily digestible information on the subject.
   Especially the lectures on the use of SIMD and GPUs in ray tracing might prove
   useful when implementing a path tracing algorithm using Accelerate.
+
+## FAQ
+
+### Why are there no tests?
+
+Good question!
