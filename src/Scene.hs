@@ -115,11 +115,20 @@ hitPlane = undefined
 
 -- | Distance to a Spere if it intersects, returns a maybe float for the distance.
 distanceToSphere :: Exp Sphere -> Exp RayF -> Exp (Maybe Float)
-distanceToSphere = undefined
+distanceToSphere (Sphere' pos rad _) (Ray' ori dir) = miss ? (nothing, just dist)
+  where
+    p       = ori + ((pos - ori) `dot` dir) *^ dir
+    d_cp    = norm (p - pos)
+    sep     = p - ori
+    miss    = d_cp >= rad || sep `dot` dir <= 0
+    dist    = norm sep - sqrt (rad ** 2 - d_cp ** 2)
 
 -- | Distance to a Plane if it intersects, returns a maybe float the distance.
 distanceToPlane :: Exp Plane -> Exp RayF -> Exp (Maybe Float)
-distanceToPlane = undefined
+distanceToPlane (Plane' pos nor _) (Ray' or dir) = (x >= 0) ? (nothing, just dist)
+  where
+    x = dir `dot` pos
+    dist = ((pos - or) `dot` nor) / x
 
 -- | Max possible value for a float, usefull as distance if there is not hit
 infinite :: Exp Float
