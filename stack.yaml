@@ -46,7 +46,7 @@ extra-deps:
   - github: AccelerateHS/accelerate
     commit: 95f3b4705d78d497690c3e466632100732a4947b
   - git: https://github.com/AccelerateHS/accelerate-llvm.git
-    commit: 50143c9458c11fb3618acaea8f98b5634eb4320d
+    commit: 40ccb21bfb1d089f91405ef8d1bab152249a6759
     subdirs:
       - accelerate-llvm
       - accelerate-llvm-native
