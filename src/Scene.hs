@@ -50,11 +50,11 @@ primaryRays ~(Camera' cPos cDir (toFloating -> cFov)) = map transform
     verticalFov = 2.0 * atan (tan ((cFov * (pi / 180.0)) / 2.0) * screenAspect)
     viewMatrix :: Exp (M44 Float)
     viewMatrix =
-      infinitePerspective verticalFov screenAspect 0.01 !*!
-      -- TODO: Right now cDir is a normalized looking direction, but this should
-      --       become a quaternion once we add user input
-      -- TODO: THis only works for cPos = (0, 0, 0)
-      lookAt (cPos + cDir) cPos (V3' 0.0 1.0 0.0)
+      -- TODO: This lookAt is not quite right apparently, but it works fine when
+      --       the camera is in the origin so we should fix this once we have
+      --       user input
+      lookAt cPos (cPos + cDir) (V3' 0.0 1.0 0.0) !*!
+      infinitePerspective verticalFov screenAspect 0.001
 
     transform :: Exp (V2 Int, Int) -> Exp (RayF, Int)
     transform (T2 (vecToFloat -> rasterPos) seed) =
@@ -67,8 +67,10 @@ primaryRays ~(Camera' cPos cDir (toFloating -> cFov)) = map transform
           V2' screenX screenY = rasterPos / screenSize * 2.0 + V2' (-1.0) 1.0
 
           nearPoint, farPoint :: Exp (V4 Float)
-          nearPoint = normalize $ viewMatrix !* point (V3' screenX screenY 1.0)
-          farPoint = normalize $ viewMatrix !* point (V3' screenX screenY (-1.0))
+          nearPoint = normalize $
+            viewMatrix !* point (V3' screenX (negate screenY) 0.0)
+          farPoint = normalize $
+            viewMatrix !* point (V3' screenX (negate screenY) 1.0)
 
           -- TODO: This noramlize is not necesary and is here purely for
           --       debugging purposes

@@ -7,12 +7,14 @@ import Linear
 
 getStartCamera :: Camera
 getStartCamera = Camera
-   { _cameraPosition = V3 1.0 (-1.6) (-4.8)
+   -- { _cameraPosition = V3 1.0 (-1.6) (-4.8)
+   { _cameraPosition = V3 0 0 0
    -- TODO: Use proper angles here. This should be implemented using quaternions
    --       and euler angles, but since we don't have any way to rotate the
    --       camera yet we'll just use looking direciton instead.
-   -- , _cameraDirection = V3 0.3 (-0.3) 0.0
-   , _cameraDirection = normalize $ V3 (-0.1) (-0.1) (-1.0)
+   -- , _cameraDirection = normalize $ V3 0.3 (-0.3) 0.0
+   -- , _cameraDirection = normalize $ V3 (-0.1) (-0.1) (-1.0)
+   , _cameraDirection = normalize $ V3 0 0 (-1)
    , _cameraFov = 90
    }
 
