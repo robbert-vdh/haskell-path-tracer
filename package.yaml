@@ -50,7 +50,7 @@ flags:
   cpu:
     description: "Run the application using Accelerate's CPU backend."
     manual: true
-    default: true
+    default: false
 
 executables:
   tracer-exe:
