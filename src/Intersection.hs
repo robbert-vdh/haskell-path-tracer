@@ -8,11 +8,10 @@
 module Intersection where
 
 import Data.Array.Accelerate
-import Data.Array.Accelerate.Control.Lens
 import Data.Array.Accelerate.Data.Maybe
 import Data.Array.Accelerate.Linear
 
-import Scene.Objects as O
+import Scene.Objects
 
 class Primitive p where
   -- | Distance to the primitive if it intersects. Returns a 'Just t' if ray
@@ -23,10 +22,6 @@ class Primitive p where
   hit :: Exp p -> Exp RayF -> Exp Float -> Exp (RayF, Material)
 
   normal :: Exp p -> Exp Position -> Exp Direction
-
-  material :: Exp p -> Exp Material
-  default material :: HasMaterial p Material => Exp p -> Exp Material
-  material p = p ^. O.material
 
 instance Primitive Sphere where
   distanceTo ~(Sphere' pos rad _) ~(Ray' ori dir) =
