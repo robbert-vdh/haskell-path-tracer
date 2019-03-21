@@ -84,16 +84,18 @@ primaryRays ~(Camera' cPos cDir (toFloating -> cFov)) = map transform
 -- ** Single ray, multiple objects
 -- | A function which calculates the resulting color given a bounce limit,
 -- a scene and a ray.
-traceRay :: Int -> Acc Scene -> Exp RayF -> Exp Color
+traceRay :: Exp Int -> Acc Scene -> Exp RayF -> Exp Color
 traceRay limit scene (Ray' o d) = go limit o d
   where
-    go :: Int -> Exp Position -> Exp Direction -> Exp Color
-    -- When bounce limit is reached return black
-    go 0 _ _ = V3' 0.0 0.0 0.0
+    go :: Exp Int -> Exp Position -> Exp Direction -> Exp Color
     -- If not, check if a ray from position @pos@ going in direction @dir@
-    -- itersects with anything in the scene. If it does calculate reflection
-    -- and recursivly call this function. If nothing gets hit, return black
-    go bounces pos dir = undefined
+    -- itersects with anything in the scene. If it does calculate reflection and
+    -- recursivly call this function. If nothing gets hit or the bounce limit is
+    -- reached, return black.
+    go bounces pos dir =
+      if bounces == 0
+        then V3' 0.0 0.0 0.0
+        else undefined
 
 -- | Find the nearest hit for a ray given a array of objects
 --
@@ -101,7 +103,7 @@ traceRay limit scene (Ray' o d) = go limit o d
 -- extract the Just Exps.
 castRay ::
      forall obj. Elt obj
-  => (Exp obj -> Exp RayF -> Exp (Bool, Float))
+  => (Exp obj -> Exp RayF -> Exp (Maybe Float))
   -> Acc (Vector obj) -- the list of objects (must be the same type)
   -> Exp RayF -- Ray with start and direction
   -> Exp (Maybe (Float, obj)) -- Return hit?, distance and which object has been hit
