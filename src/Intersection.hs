@@ -21,25 +21,24 @@ class Primitive p where
 
 instance Primitive Sphere where
   distanceTo ~(Sphere' pos rad _) ~(Ray' ori dir) =
-    if miss
+    if d_cp >= rad || sep `dot` dir <= 0 -- miss
       then nothing
       else just dist
     where
       p = ori + ((pos - ori) `dot` dir) *^ dir
       d_cp = norm (p - pos)
       sep = p - ori
-      miss = d_cp >= rad || sep `dot` dir <= 0
       dist = norm sep - sqrt (rad ** 2 - d_cp ** 2)
 
   hit = undefined
 
 instance Primitive Plane where
-  distanceTo ~(Plane' pos nor _) ~(Ray' or dir) =
+  distanceTo ~(Plane' pos nor _) ~(Ray' oii dir) =
     if x >= 0
       then nothing
       else just dist
     where
       x = dir `dot` pos
-      dist = ((pos - or) `dot` nor) / x
+      dist = ((pos - ori) `dot` nor) / x
 
   hit = undefined
