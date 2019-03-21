@@ -84,3 +84,17 @@ getObjects =
               }
         }
     ]
+
+getBasicObjects :: Scene
+getBasicObjects = Scene [sp] []
+  where
+    sp = Sphere
+      { _spherePosition = V3 0.0 0.0 (-5.0)
+      , _sphereRadius = 1.0
+      , _sphereMaterial =
+        Material
+          { _materialColor = V3 1.0 1.0 1.0
+          , _materialSpecularity = 0.7
+          , _materialIlluminance = 0.5
+          }
+      }
