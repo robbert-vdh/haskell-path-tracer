@@ -1,5 +1,6 @@
-{-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE RebindableSyntax #-}
+{-# LANGUAGE ViewPatterns #-}
 
 -- | This module contains the main entry point the for the Accelerate program.
 --
@@ -13,14 +14,14 @@
 module Scene where
 
 import Data.Array.Accelerate
-import Data.Array.Accelerate.Linear
-import Data.Array.Accelerate.Data.Maybe
 import Data.Array.Accelerate.Array.Sugar (Elt)
+import Data.Array.Accelerate.Data.Maybe
+import Data.Array.Accelerate.Linear
 
 import qualified Prelude as P ()
 
-import Scene.Objects
 import Data.Array.Accelerate.Linear.Projection
+import Scene.Objects
 import Util
 
 -- | Render a single sample, combining the previous results with the newly
@@ -41,9 +42,7 @@ render camera screen = zipWith (+) result
 -- and a matrix of screen pixel positions. These positions should be in the
 -- format @V2 <0 .. screenWidth> <0 .. screenHeight>@.
 primaryRays ::
-     Exp Camera
-  -> Acc (Matrix (V2 Int, Int))
-  -> Acc (Matrix (RayF, Int))
+     Exp Camera -> Acc (Matrix (V2 Int, Int)) -> Acc (Matrix (RayF, Int))
 primaryRays ~(Camera' cPos cDir (toFloating -> cFov)) = map transform
   where
     verticalFov :: Exp Float
@@ -100,35 +99,50 @@ traceRay limit scene (Ray' o d) = go limit o d
 --
 -- we can map distanceTo{Sphere,Plane} on all opjects and use the `justs` function to
 -- extract the Just Exps.
-castRay :: forall obj. Elt obj
-    => (Exp obj -> Exp RayF -> Exp(Bool, Float))
-    -> Acc (Vector obj)  -- the list of objects (must be the same type)
-    -> Exp RayF          -- Ray with start and direction
-    -> Exp (Maybe (Float, obj)) -- Return hit?, distance and which object has been hit
+castRay ::
+     forall obj. Elt obj
+  => (Exp obj -> Exp RayF -> Exp (Bool, Float))
+  -> Acc (Vector obj) -- the list of objects (must be the same type)
+  -> Exp RayF -- Ray with start and direction
+  -> Exp (Maybe (Float, obj)) -- Return hit?, distance and which object has been hit
 castRay = undefined
 
 -- ** Single ray, single object
 -- | Get intersection point, normal, color and shine for a sphere hit. Assumes there is a hit
-hitSphere :: Exp Sphere -> Exp Float -> Exp RayF -> Exp (Position, Direction, Color, Float)
+hitSphere ::
+     Exp Sphere
+  -> Exp Float
+  -> Exp RayF
+  -> Exp (Position, Direction, Color, Float)
 hitSphere = undefined
 
 -- | Get the intersection point, normal, color and shine of a plane hit. Assumes there is a hit
-hitPlane :: Exp Plane -> Exp Float -> Exp RayF -> Exp (Position, Direction, Color, Float)
+hitPlane ::
+     Exp Plane
+  -> Exp Float
+  -> Exp RayF
+  -> Exp (Position, Direction, Color, Float)
 hitPlane = undefined
 
 -- | Distance to a Spere if it intersects, returns a maybe float for the distance.
 distanceToSphere :: Exp Sphere -> Exp RayF -> Exp (Maybe Float)
-distanceToSphere (Sphere' pos rad _) (Ray' ori dir) = miss ? (nothing, just dist)
+distanceToSphere (Sphere' pos rad _) (Ray' ori dir) =
+  if miss
+    then nothing
+    else just dist
   where
-    p       = ori + ((pos - ori) `dot` dir) *^ dir
-    d_cp    = norm (p - pos)
-    sep     = p - ori
-    miss    = d_cp >= rad || sep `dot` dir <= 0
-    dist    = norm sep - sqrt (rad ** 2 - d_cp ** 2)
+    p = ori + ((pos - ori) `dot` dir) *^ dir
+    d_cp = norm (p - pos)
+    sep = p - ori
+    miss = d_cp >= rad || sep `dot` dir <= 0
+    dist = norm sep - sqrt (rad ** 2 - d_cp ** 2)
 
 -- | Distance to a Plane if it intersects, returns a maybe float the distance.
 distanceToPlane :: Exp Plane -> Exp RayF -> Exp (Maybe Float)
-distanceToPlane (Plane' pos nor _) (Ray' or dir) = (x >= 0) ? (nothing, just dist)
+distanceToPlane (Plane' pos nor _) (Ray' or dir) =
+  if (x >= 0)
+    then nothing
+    else just dist
   where
     x = dir `dot` pos
     dist = ((pos - or) `dot` nor) / x
