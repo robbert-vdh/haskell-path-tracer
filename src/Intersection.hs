@@ -33,7 +33,7 @@ instance Primitive Sphere where
   hit = undefined
 
 instance Primitive Plane where
-  distanceTo ~(Plane' pos nor _) ~(Ray' oii dir) =
+  distanceTo ~(Plane' pos nor _) ~(Ray' ori dir) =
     if x >= 0
       then nothing
       else just dist
