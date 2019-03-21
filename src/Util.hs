@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeOperators #-}
 
 -- | Small utility functions for conversions.
@@ -10,6 +12,7 @@ import Data.Array.Accelerate.Linear as A
 
 import qualified Prelude as P
 
+import Intersection
 import Scene.Objects
 import Scene.World (getStartCamera)
 
@@ -18,6 +21,15 @@ import Scene.World (getStartCamera)
 -- | Transform homogeneous coordinates back into regular vectors.
 fromHomogeneous :: Elt a => Exp (V4 a) -> Exp (V3 a)
 fromHomogeneous ~(V4' x y z _) = V3' x y z
+
+-- | Map a function on every object in a scene.
+mapPrimitives ::
+     Elt a
+  => (forall p. Primitive p =>
+                  Exp p -> Exp a)
+  -> Scene
+  -> Acc (Vector a)
+mapPrimitives f (Scene s p) = map f (use s) ++ map f (use p)
 
 -- | Convert an integer vector to a float vector. This is only used when
 -- converting between rasterization and world spaces.
