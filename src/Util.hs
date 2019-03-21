@@ -28,8 +28,8 @@ mapPrimitives ::
   => (forall p. Primitive p =>
                   Exp p -> Exp a)
   -> Scene
-  -> Acc (Vector a)
-mapPrimitives f (Scene s p) = map f (use s) ++ map f (use p)
+  -> [Exp a]
+mapPrimitives f (Scene s p) = P.map (f . constant) s P.++ P.map (f . constant) p
 
 -- | Convert an integer vector to a float vector. This is only used when
 -- converting between rasterization and world spaces.

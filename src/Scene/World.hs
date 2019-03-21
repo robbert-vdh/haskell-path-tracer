@@ -2,7 +2,6 @@ module Scene.World where
 
 import Scene.Objects
 
-import Data.Array.Accelerate as A
 import Linear
 
 getStartCamera :: Camera
@@ -23,69 +22,65 @@ getStartCamera =
 getObjects :: Scene
 getObjects =
   Scene
-    (A.fromList
-       (Z :. 4)
-       [ Sphere
-           { _spherePosition = V3 2.0 2.0 (-14.0)
-           , _sphereRadius = 5.0
-           , _sphereMaterial =
-               Material
-                 { _materialColor = V3 0.0 1.0 0.0
-                 , _materialSpecularity = 0.7
-                 , _materialIlluminance = 0.0
-                 }
-           }
-       , Sphere
-           { _spherePosition = V3 6.0 2.0 (-9.0)
-           , _sphereRadius = 1.5
-           , _sphereMaterial =
-               Material
-                 { _materialColor = V3 0.0 1.0 0.0
-                 , _materialSpecularity = 0.4
-                 , _materialIlluminance = 0.0
-                 }
-           }
-       , Sphere
-           { _spherePosition = V3 4.5 1.0 (-9.5)
-           , _sphereRadius = 0.3
-           , _sphereMaterial =
-               Material
-                 { _materialColor = V3 0.0 0.0 1.0
-                 , _materialSpecularity = 0.0
-                 , _materialIlluminance = 1.0
-                 }
-           }
-       , Sphere
-           { _spherePosition = V3 12.0 (-2.4) (-20.0)
-           , _sphereRadius = 0.5
-           , _sphereMaterial =
-               Material
-                 { _materialColor = V3 0.5 0.5 0.5
-                 , _materialSpecularity = 0.0
-                 , _materialIlluminance = 0.0
-                 }
-           }
-       ])
-    (A.fromList
-       (Z :. 2)
-       [ Plane
-           { _planeDirection = V3 0.0 1.0 0.0
-           , _planePosition = V3 0.0 (-3.0) 0.0
-           , _planeMaterial =
-               Material
-                 { _materialColor = V3 0.0 0.0 0.0
-                 , _materialSpecularity = 0.7
-                 , _materialIlluminance = 0.0
-                 }
-           }
-       , Plane
-           { _planeDirection = V3 0.0 (-1.0) 0.0
-           , _planePosition = V3 0.0 10.0 0.0
-           , _planeMaterial =
-               Material
-                 { _materialColor = V3 0.0 0.0 0.0
-                 , _materialSpecularity = 0.1
-                 , _materialIlluminance = 0.8
-                 }
-           }
-       ])
+    [ Sphere
+        { _spherePosition = V3 2.0 2.0 (-14.0)
+        , _sphereRadius = 5.0
+        , _sphereMaterial =
+            Material
+              { _materialColor = V3 0.0 1.0 0.0
+              , _materialSpecularity = 0.7
+              , _materialIlluminance = 0.0
+              }
+        }
+    , Sphere
+        { _spherePosition = V3 6.0 2.0 (-9.0)
+        , _sphereRadius = 1.5
+        , _sphereMaterial =
+            Material
+              { _materialColor = V3 0.0 1.0 0.0
+              , _materialSpecularity = 0.4
+              , _materialIlluminance = 0.0
+              }
+        }
+    , Sphere
+        { _spherePosition = V3 4.5 1.0 (-9.5)
+        , _sphereRadius = 0.3
+        , _sphereMaterial =
+            Material
+              { _materialColor = V3 0.0 0.0 1.0
+              , _materialSpecularity = 0.0
+              , _materialIlluminance = 1.0
+              }
+        }
+    , Sphere
+        { _spherePosition = V3 12.0 (-2.4) (-20.0)
+        , _sphereRadius = 0.5
+        , _sphereMaterial =
+            Material
+              { _materialColor = V3 0.5 0.5 0.5
+              , _materialSpecularity = 0.0
+              , _materialIlluminance = 0.0
+              }
+        }
+    ]
+    [ Plane
+        { _planeDirection = V3 0.0 1.0 0.0
+        , _planePosition = V3 0.0 (-3.0) 0.0
+        , _planeMaterial =
+            Material
+              { _materialColor = V3 0.0 0.0 0.0
+              , _materialSpecularity = 0.7
+              , _materialIlluminance = 0.0
+              }
+        }
+    , Plane
+        { _planeDirection = V3 0.0 (-1.0) 0.0
+        , _planePosition = V3 0.0 10.0 0.0
+        , _planeMaterial =
+            Material
+              { _materialColor = V3 0.0 0.0 0.0
+              , _materialSpecularity = 0.1
+              , _materialIlluminance = 0.8
+              }
+        }
+    ]
