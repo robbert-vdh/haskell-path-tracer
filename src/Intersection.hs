@@ -1,4 +1,6 @@
+{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RebindableSyntax #-}
 
 -- | This module defines a common interface for doing calculations on
@@ -6,10 +8,11 @@
 module Intersection where
 
 import Data.Array.Accelerate
+import Data.Array.Accelerate.Control.Lens
 import Data.Array.Accelerate.Data.Maybe
 import Data.Array.Accelerate.Linear
 
-import Scene.Objects
+import Scene.Objects as O
 
 class Primitive p where
   -- | Distance to the primitive if it intersects. Returns a 'Just t' if ray
@@ -22,6 +25,8 @@ class Primitive p where
   normal :: Exp p -> Exp Position -> Exp Direction
 
   material :: Exp p -> Exp Material
+  default material :: HasMaterial p Material => Exp p -> Exp Material
+  material p = p ^. O.material
 
 instance Primitive Sphere where
   distanceTo ~(Sphere' pos rad _) ~(Ray' ori dir) =
@@ -38,8 +43,6 @@ instance Primitive Sphere where
 
   normal = undefined
 
-  material ~(Sphere' _ _ m) = m
-
 instance Primitive Plane where
   distanceTo ~(Plane' pos nor _) ~(Ray' ori dir) =
     if x >= 0
@@ -52,5 +55,3 @@ instance Primitive Plane where
   hit = undefined
 
   normal ~(Plane' _ n _) _ = n
-
-  material ~(Plane' _ _ m) = m
