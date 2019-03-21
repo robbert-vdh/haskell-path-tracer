@@ -19,6 +19,10 @@ class Primitive p where
   -- there is a hit.
   hit :: Exp p -> Exp RayF -> Exp Float -> Exp (RayF, Material)
 
+  normal :: Exp p -> Exp Position -> Exp Direction
+
+  material :: Exp p -> Exp Material
+
 instance Primitive Sphere where
   distanceTo ~(Sphere' pos rad _) ~(Ray' ori dir) =
     if d_cp >= rad || sep `dot` dir <= 0 -- miss
@@ -32,6 +36,10 @@ instance Primitive Sphere where
 
   hit = undefined
 
+  normal = undefined
+
+  material ~(Sphere' _ _ m) = m
+
 instance Primitive Plane where
   distanceTo ~(Plane' pos nor _) ~(Ray' ori dir) =
     if x >= 0
@@ -42,3 +50,7 @@ instance Primitive Plane where
       dist = ((pos - ori) `dot` nor) / x
 
   hit = undefined
+
+  normal ~(Plane' _ n _) _ = n
+
+  material ~(Plane' _ _ m) = m
