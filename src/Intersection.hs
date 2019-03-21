@@ -36,7 +36,7 @@ instance Primitive Sphere where
 
   hit = undefined
 
-  normal = undefined
+  normal ~(Sphere' ori _ _) pos = normalize (pos - ori) 
 
 instance Primitive Plane where
   distanceTo ~(Plane' pos nor _) ~(Ray' ori dir) =
@@ -49,4 +49,5 @@ instance Primitive Plane where
 
   hit = undefined
 
-  normal ~(Plane' _ n _) _ = n
+  normal ~(Plane' _ nor _) _ = nor
+
