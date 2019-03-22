@@ -14,10 +14,9 @@ import Data.Array.Accelerate.Linear
 
 import Scene.Objects
 
-class Primitive p
+class Primitive p where
   -- | Distance to the primitive if it intersects. Returns a 'Just t' if ray
   -- intersects with the primitive at @rayOrigin + rayDIrection * t@.
-  where
   distanceTo :: Exp RayF -> Exp p -> Exp (Maybe Float)
   -- | Get intersection point, normal and material for a sphere hit. Assumes
   -- there is a hit.
