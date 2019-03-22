@@ -86,7 +86,7 @@ getObjects =
     ]
 
 getBasicObjects :: Scene
-getBasicObjects = Scene [sp] []
+getBasicObjects = Scene [sp] [pl]
   where
     sp = Sphere
       { _spherePosition = V3 0.0 0.0 (-5.0)
@@ -97,4 +97,14 @@ getBasicObjects = Scene [sp] []
           , _materialSpecularity = 0.7
           , _materialIlluminance = 0.5
           }
+      }
+    pl = Plane
+      { _planeDirection = V3 0.0 1.0 0.0
+      , _planePosition = V3 0.0 (-1.0) 0.0
+      , _planeMaterial =
+          Material
+            { _materialColor = V3 1.0 1.0 1.0
+            , _materialSpecularity = 0.1
+            , _materialIlluminance = 0.8
+            }
       }

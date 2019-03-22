@@ -46,12 +46,16 @@ instance Primitive Sphere where
   normal pos ~(Sphere' ori _ _) = normalize (pos - ori)
 
 instance Primitive Plane where
+  -- | Calculate distance to plane, implemented in the same manner
+  -- as in the scratchpixel tutorial.
+  --
+  -- https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-plane-and-ray-disk-intersection
   distanceTo ~(Ray' ori dir) ~(Plane' pos nor _) =
-    if x >= 0
+    if (denom > 1e-6 || dist < 0)
       then nothing
       else just dist
     where
-      x = dir `dot` pos
-      dist = ((pos - ori) `dot` nor) / x
+      denom = dir `dot` pos
+      dist = ((pos - ori) `dot` nor) / denom
 
   normal _ ~(Plane' _ nor _) = nor
