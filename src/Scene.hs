@@ -34,9 +34,7 @@ render ::
   -> Acc (Matrix Color)
 render camera screen = zipWith (+) result
   where
-    hasHit ray =
-      P.foldr (\x acc -> acc || isJust x) (constant False) $
-      mapPrimitives (distanceTo ray) getBasicObjects
+    hasHit ray = expAny isJust $ mapScene (distanceTo ray) getBasicObjects
     -- TODO: Do some actual rendering here
     result =
       map

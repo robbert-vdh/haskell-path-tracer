@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE ViewPatterns #-}
 
 -- | Small utility functions for conversions.
 
@@ -10,6 +11,7 @@ import Data.Array.Accelerate as A
 import Data.Array.Accelerate.Data.Functor as A
 import Data.Array.Accelerate.Linear as A
 
+import qualified Data.List as P
 import qualified Prelude as P
 
 import Intersection
@@ -22,20 +24,66 @@ import Scene.World (getStartCamera)
 fromHomogeneous :: Elt a => Exp (V4 a) -> Exp (V3 a)
 fromHomogeneous ~(V4' x y z _) = V3' x y z
 
--- | Map a function on every object in a scene.
-mapPrimitives ::
-     Elt a
-  => (forall p. Primitive p =>
-                  Exp p -> Exp a)
-  -> Scene
-  -> [Exp a]
-mapPrimitives f (Scene s p) = P.map (f . constant) s P.++ P.map (f . constant) p
-
 -- | Convert an integer vector to a float vector. This is only used when
 -- converting between rasterization and world spaces.
 vecToFloat ::
      (Functor f, Elt (f Int), Elt (f Float)) => Exp (f Int) -> Exp (f Float)
 vecToFloat = fmap toFloating
+
+-- ** Mapping and folding over a scene
+--
+-- Accelerate does not support sum types (yet), but we still want a nice and
+-- convenient way to operate on and compare every object in a scene. Our
+-- solution to this problem is simply mapping every primitive @Exp p@ to an @Exp
+-- a@ and storing those results in a list. Ideally we would then lift that list
+-- to an @Exp [a]@ so we can fold and map over that list, but that's not an
+-- option because of 'Exp''s semantics. Using Accelerate's array structures
+-- instead of lists is also not possible since any operation on those arrays
+-- should be executed in an 'Acc' context, and we're already doing calculations
+-- on 'Exp' level here.
+--
+-- Here we simply abuse the fact that our scene is static accross the whole
+-- runtime of the application. Even though we're mapping and folding over lists,
+-- the compiler can simply unfold these loops during compilation. That allows us
+-- to still use higher order functions while not making things more complicated
+-- than they should be.
+
+-- | Map a function over every object in a scene.
+--
+-- TODO: Check whether there's a performance benefit to storing the primitives
+--       as 'Exp''s instead of using 'constant' here.
+mapScene ::
+     Elt a
+  => (forall p. Primitive p =>
+                  Exp p -> Exp a)
+  -> Scene
+  -> [Exp a]
+mapScene f (Scene s p) = P.map (f . constant) s P.++ P.map (f . constant) p
+
+-- TODO: Think of a better naming scheme for these functions over @[Exp a]@
+
+-- | Determines whether the predicate returns 'True' for any value in the list.
+expAny :: (Exp a -> Exp Bool) -> [Exp a] -> Exp Bool
+expAny f = P.foldr (\x acc -> acc || f x) (constant False)
+
+-- | Find the smallest value in a list of 'Exp a'.
+expMin :: Ord a => [Exp a] -> Exp a
+expMin = expMinWith P.id
+
+-- | Find the smallest value in a list of 'Exp a' by applying a function. The
+-- definition here is a bit ugly, but I was not sure whether Haskell's laziness
+-- would transfer over to the comopiled program.
+expMinWith :: (Ord b, Elt a) => (Exp a -> Exp b) -> [Exp a] -> Exp a
+expMinWith _ [] = error "Invalid call to 'expMinWith'"
+expMinWith _ [x] = x
+expMinWith f (x:xs) =
+  fst $
+  P.foldl'
+    (\a@(T2 _ valA) (calcKey -> b@(T2 _ valB)) -> cond (valA <= valB) a b)
+    (calcKey x)
+    xs
+  where
+    calcKey a = T2 a (f a)
 
 -- * Definitions
 
