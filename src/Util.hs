@@ -20,7 +20,9 @@ import Scene.World (getStartCamera)
 
 -- * Functions
 
--- | Transform homogeneous coordinates back into regular vectors.
+-- | Transform homogeneous coordinates back into regular vectors. There is a
+-- function in 'Linear.V4' that has the same signature, but it also normalizes
+-- based on the @w@ coordinate causing vectors (with @w = 0@) to become NaN.
 fromHomogeneous :: Elt a => Exp (V4 a) -> Exp (V3 a)
 fromHomogeneous ~(V4' x y z _) = V3' x y z
 
