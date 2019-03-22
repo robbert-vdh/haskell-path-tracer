@@ -17,10 +17,12 @@ import Data.Array.Accelerate
 import Data.Array.Accelerate.Data.Maybe
 import Data.Array.Accelerate.Linear
 
-import qualified Prelude as P ()
+import qualified Prelude as P
 
 import Data.Array.Accelerate.Linear.Projection
+import Intersection
 import Scene.Objects
+import Scene.World
 import Util
 
 -- | Render a single sample, combining the previous results with the newly
@@ -32,9 +34,16 @@ render ::
   -> Acc (Matrix Color)
 render camera screen = zipWith (+) result
   where
+    hasHit ray =
+      P.foldr (\x acc -> acc || isJust x) (constant False) $
+      mapPrimitives (distanceTo ray) getBasicObjects
     -- TODO: Do some actual rendering here
     result =
-      map (\(T2 (Ray' _ d) _) -> (d + 1.0) / 2.0) $
+      map
+        (\(T2 r _) ->
+           if hasHit r
+             then V3' 0 1 0
+             else V3' 1 0 0) $
       primaryRays camera screen
 
 -- | Calculate the origin and directions of the primary rays based on a camera
