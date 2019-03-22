@@ -33,6 +33,10 @@ class Primitive p where
       hitPosition = o + (d ^* t)
 
 instance Primitive Sphere where
+  -- | Calculate distance to a sphere, implemented in the same manner as
+  -- in the scratchpixel tutorial
+  --
+  -- https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-sphere-intersection
   distanceTo ~(Ray' ori dir) ~(Sphere' pos rad _) =
     if d_cp >= rad || sep `dot` dir <= 0 -- miss
       then nothing
@@ -51,7 +55,7 @@ instance Primitive Plane where
   --
   -- https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-plane-and-ray-disk-intersection
   distanceTo ~(Ray' ori dir) ~(Plane' pos nor _) =
-    if (denom > 1e-6 || dist < 0)
+    if (denom <= 1e-6 || dist < 0)
       then nothing
       else just dist
     where
