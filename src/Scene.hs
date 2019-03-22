@@ -86,7 +86,7 @@ primaryRays ~(Camera' cPos cDir (toFloating -> cFov)) = map transform
           rayDir = normalize $ fromHomogeneous $ nearPoint - farPoint
 
           ray :: Exp RayF
-          ray = Ray' (fromHomogeneous nearPoint) rayDir
+          ray = Ray' cPos rayDir
        in T2 ray seed
 
 -- ** Single ray, multiple objects
