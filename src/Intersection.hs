@@ -55,11 +55,11 @@ instance Primitive Plane where
   --
   -- https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-plane-and-ray-disk-intersection
   distanceTo ~(Ray' ori dir) ~(Plane' pos nor _) =
-    if (denom <= 1e-6 || dist > 0)
+    if (denom <= 1e-6 || dist < 0)
       then nothing
       else just dist
     where
-      denom = dir `dot` pos
+      denom = dir `dot` nor
       dist = ((pos - ori) `dot` nor) / denom
 
   normal _ ~(Plane' _ nor _) = nor

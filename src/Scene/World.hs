@@ -89,7 +89,7 @@ getBasicObjects :: Scene
 getBasicObjects = Scene [sp] [pl]
   where
     sp = Sphere
-      { _spherePosition = V3 0.0 0.0 (-5.0)
+      { _spherePosition = V3 0.0 0.0 (-2.0)
       , _sphereRadius = 1.0
       , _sphereMaterial =
         Material
@@ -99,7 +99,7 @@ getBasicObjects = Scene [sp] [pl]
           }
       }
     pl = Plane
-      { _planeDirection = V3 0.0 1.0 0.0
+      { _planeDirection = V3 0.0 (-1.0) 0.0
       , _planePosition = V3 0.0 (-1.0) 0.0
       , _planeMaterial =
           Material
