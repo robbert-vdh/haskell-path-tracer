@@ -9,6 +9,7 @@ module Util where
 
 import Data.Array.Accelerate as A
 import Data.Array.Accelerate.Data.Functor as A
+import Data.Array.Accelerate.Data.Maybe as A
 import Data.Array.Accelerate.Linear as A
 
 import qualified Data.List as P
@@ -72,6 +73,10 @@ expAny f = P.foldr (\x acc -> acc || f x) (constant False)
 expMin :: Ord a => [Exp a] -> Exp a
 expMin = expMinWith P.id
 
+expMap :: (Exp a -> Exp b) -> [Exp a] -> [Exp b]
+expMap _ []     = []
+expMap f (x:xs) = f x : expMap f xs
+
 -- | Find the smallest value in a list of 'Exp a' by applying a function. The
 -- definition here is a bit ugly, but I was not sure whether Haskell's laziness
 -- would transfer over to the comopiled program.
@@ -86,6 +91,11 @@ expMinWith f (x:xs) =
     xs
   where
     calcKey a = T2 a (f a)
+
+-- expJusts :: (Elt a) => [Exp (A.Maybe a)] -> [Exp a]
+-- expJusts xs = [fromJust x | x <- xs, isJust x]
+-- expJusts [] = []
+-- expJusts (x:xs) = cond (isJust x) ((fromJust x) : expJusts xs) (expJusts xs)
 
 -- * Definitions
 
