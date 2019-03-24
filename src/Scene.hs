@@ -60,7 +60,8 @@ primaryRays ~(Camera' cPos cDir (toFloating -> cFov)) = map transform
       -- TODO: This lookAt is not quite right apparently, but it works fine when
       --       the camera is in the origin so we should fix this once we have
       --       user input
-      lookAt cPos (cPos + cDir) (V3' 0.0 1.0 0.0) !*!
+      lookAtScratch cPos (cPos + cDir) (V3' 0.0 1.0 0.0)
+      !*!
       infinitePerspective verticalFov screenAspect 0.001
 
     transform :: Exp (V2 Int, Int) -> Exp (RayF, Int)

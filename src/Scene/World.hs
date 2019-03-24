@@ -15,7 +15,7 @@ getStartCamera =
    -- , _cameraDirection = normalize $ V3 0.3 (-0.3) 0.0
    -- , _cameraDirection = normalize $ V3 (-0.1) (-0.1) (-1.0)
     , _cameraDirection = normalize $ V3 0 0 (-1)
-    , _cameraFov = 90
+    , _cameraFov = 45
     }
 
 -- | These are the objects and lights used in our static scene.

@@ -37,6 +37,26 @@ lookAt eye center up =
     yd = -dot ya eye
     zd = dot za eye
 
+-- | Lookat function as defined by scratchpixel added for debugging
+--
+-- https://www.scratchapixel.com/lessons/mathematics-physics-for-computer-graphics/lookat-function
+lookAtScratch ::
+    (Epsilon a, Floating a)
+  => Exp (V3 a) -- ^ From
+  -> Exp (V3 a) -- ^ To
+  -> Exp (V3 a) -- ^ Tmp
+  -> Exp (M44 a)
+lookAtScratch from' to' tmp =
+  V4'
+    (V4' (right ^. _x)   (right ^. _y)   (right ^. _z)   0)
+    (V4' (up ^. _x)      (up ^. _y)      (up ^. _z)      0)
+    (V4' (forward ^. _x) (forward ^. _y) (forward ^. _z) 0)
+    (V4' (from' ^. _x)    (from' ^. _y)    (from' ^. _z)    0)
+  where
+    forward = normalize (from' - to')
+    right   = (normalize tmp) `cross` forward
+    up      = forward `cross` right
+
 -- | Build a matrix for a symmetric perspective-view frustum
 perspective ::
      Floating a
