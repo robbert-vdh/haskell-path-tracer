@@ -38,14 +38,17 @@ instance Primitive Sphere where
   --
   -- https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-sphere-intersection
   distanceTo ~(Ray' ori dir) ~(Sphere' pos rad _) =
-    if d_cp >= rad || sep `dot` dir <= 0 -- miss
+    if tca < 0 || d2 > (rad ** 2) || t < 0
       then nothing
-      else just dist
+      else just t
     where
-      p = ori + ((pos - ori) `dot` dir) *^ dir
-      d_cp = norm (p - pos)
-      sep = p - ori
-      dist = norm sep - sqrt (rad ** 2 - d_cp ** 2)
+      l   = pos - ori
+      tca = l `dot` dir
+      d2  = (l `dot` l) - (tca * tca)
+      thc = sqrt (rad ** 2 - d2)
+      t0 = tca - thc
+      t1 = tca + thc
+      t = min t0 01
 
   normal pos ~(Sphere' ori _ _) = normalize (pos - ori)
 
