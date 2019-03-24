@@ -73,10 +73,6 @@ expAny f = P.foldr (\x acc -> acc || f x) (constant False)
 expMin :: Ord a => [Exp a] -> Exp a
 expMin = expMinWith P.id
 
-expMap :: (Exp a -> Exp b) -> [Exp a] -> [Exp b]
-expMap _ []     = []
-expMap f (x:xs) = f x : expMap f xs
-
 -- | Find the smallest value in a list of 'Exp a' by applying a function. The
 -- definition here is a bit ugly, but I was not sure whether Haskell's laziness
 -- would transfer over to the comopiled program.

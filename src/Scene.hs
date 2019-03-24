@@ -36,7 +36,7 @@ render camera screen = zipWith (+) result
   where
     hasHit ray = expAny isJust $ mapScene (distanceTo ray) getBasicObjects
     -- TODO: Do some actual rendering here
-    dist ray = expMin $ expMap (fromMaybe infinite) $ mapScene (distanceTo ray) getBasicObjects
+    dist ray = expMin $ P.map (fromMaybe infinite) $ mapScene (distanceTo ray) getBasicObjects
     result =
       map
         (\(T2 r _) ->
