@@ -86,7 +86,7 @@ getObjects =
     ]
 
 getBasicObjects :: Scene
-getBasicObjects = Scene [] [pl]
+getBasicObjects = Scene [sp] [pl]
   where
     sp = Sphere
       { _spherePosition = V3 0.0 0.0 (-2.0)

@@ -41,7 +41,7 @@ render camera screen = zipWith (+) result
       map
         (\(T2 r _) ->
            if hasHit r
-             then V3' 0 0.1 0 ^* dist r
+             then (V3' 0 1 0 ) - (V3' 0 0.1 0 ^* dist r)
              else V3' 1 0 0) $
       primaryRays camera screen
 
