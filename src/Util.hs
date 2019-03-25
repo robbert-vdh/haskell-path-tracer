@@ -88,10 +88,6 @@ expMinWith f (x:xs) =
   where
     calcKey a = T2 a (f a)
 
--- expJusts :: (Elt a) => [Exp (A.Maybe a)] -> [Exp a]
--- expJusts xs = [fromJust x | x <- xs, isJust x]
--- expJusts [] = []
--- expJusts (x:xs) = cond (isJust x) ((fromJust x) : expJusts xs) (expJusts xs)
 
 -- * Definitions
 
