@@ -4,9 +4,6 @@ import Scene.Objects
 
 import Linear
 
--- TODO: All plane normals are inverted, so we should probably invert the plane
---       intersection function instead
-
 getStartCamera :: Camera
 getStartCamera =
   Camera
@@ -65,7 +62,7 @@ getObjects =
         }
     ]
     [ Plane
-        { _planeDirection = V3 0.0 (-1.0) 0.0
+        { _planeDirection = V3 0.0 1.0 0.0
         , _planePosition = V3 0.0 (-3.0) 0.0
         , _planeMaterial =
             Material
@@ -75,7 +72,7 @@ getObjects =
               }
         }
     , Plane
-        { _planeDirection = V3 0.0 (1.0) 0.0
+        { _planeDirection = V3 0.0 (-1.0) 0.0
         , _planePosition = V3 0.0 10.0 0.0
         , _planeMaterial =
             Material
