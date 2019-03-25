@@ -96,6 +96,7 @@ primaryRays ~(Camera' cPos cDir cFov) = map transform
        in T2 ray seed
 
 -- ** Single ray, multiple objects
+
 -- | A function which calculates the resulting color given a bounce limit,
 -- a scene and a ray.
 traceRay :: Exp Int -> Scene -> Exp RayF -> Exp Color
@@ -110,12 +111,12 @@ traceRay limit scene = go limit
       if bounces == 0
         then V3' 0.0 0.0 0.0
         else let
-          f :: forall p. Primitive p => Exp p -> Exp (Float, (RayF, Material))
+          f :: forall p. Primitive p => Exp p -> Exp (Float, (Normal, Material))
           f p = T2 dist (hit ray dist p)
             where
               dist = fromMaybe infinite (distanceTo ray p)
 
-          closest_hit :: Exp (RayF, Material)
+          closest_hit :: Exp (Normal, Material)
           closest_hit = snd $ expMinWith fst $ mapScene f scene
 
           reflection = go (bounces - 1) (fst closest_hit)

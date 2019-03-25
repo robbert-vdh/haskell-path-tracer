@@ -18,15 +18,15 @@ class Primitive p where
   -- | Distance to the primitive if it intersects. Returns a 'Just t' if ray
   -- intersects with the primitive at @rayOrigin + rayDIrection * t@.
   distanceTo :: Exp RayF -> Exp p -> Exp (Maybe Float)
-  -- | Get intersection point, normal and material for a sphere hit. Assumes
-  -- there is a hit.
-  hit :: Exp RayF -> Exp Float -> Exp p -> Exp (RayF, Material)
   -- | Calculate the normal of a primitive at the specified position in world
   -- space. The normal should be pointing outwards.
   normal :: Exp Position -> Exp p -> Exp Direction
+  -- | Get intersection point, normal and material for a sphere hit. Assumes
+  -- there is a hit.
+  hit :: Exp RayF -> Exp Float -> Exp p -> Exp (Normal, Material)
 
   default hit :: HasMaterial p Material =>
-    Exp RayF -> Exp Float -> Exp p -> Exp (RayF, Material)
+    Exp RayF -> Exp Float -> Exp p -> Exp (Normal, Material)
   hit ~(Ray' o d) t p =
     T2 (Ray' hitPosition (normal hitPosition p)) (p ^. material)
     where
