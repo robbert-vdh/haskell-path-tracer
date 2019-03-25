@@ -14,12 +14,13 @@
 module Scene where
 
 import Data.Array.Accelerate
+import Data.Array.Accelerate.Control.Lens hiding (transform)
 import Data.Array.Accelerate.Data.Maybe
+import Data.Array.Accelerate.Data.Functor
 import Data.Array.Accelerate.Linear
 
-import qualified Prelude as P
+import qualified Prelude as P ()
 
-import Data.Array.Accelerate.Linear.Projection
 import Intersection
 import Scene.Objects
 import Scene.World
@@ -34,18 +35,7 @@ render ::
   -> Acc (Matrix Color)
 render camera screen = zipWith (+) result
   where
-    hasHit ray = expAny isJust $ mapScene (distanceTo ray) getObjects
-    -- TODO: Do some actual rendering here
-    dist ray =
-      expMin $
-      P.map (fromMaybe infinite) $ mapScene (distanceTo ray) getObjects
-    result =
-      map
-        (\(T2 r _) ->
-           if hasHit r
-             then V3' 0 (1 - tanh (dist r / 10) * 0.9) 0
-             else V3' 1 0 0) $
-      primaryRays camera screen
+    result = map (traceRay 20 getObjects . fst) $ primaryRays camera screen
 
 -- | Calculate the origin and directions of the primary rays based on a camera
 -- and a matrix of screen pixel positions. These positions should be in the
@@ -57,8 +47,8 @@ primaryRays ~(Camera' cPos cDir cFov) = map transform
     -- | The distance between the camera nd the virtual screen plane
     --
     -- TODO: This distance should be calculated based on the FoV
-    epsilon :: Exp Float
-    epsilon = 0.05
+    screenDistance :: Exp Float
+    screenDistance = 0.05
     -- | The direction in world space that represents looking upwards. This is
     -- used for calculating perspectives.
     up :: Exp (V3 Float)
@@ -71,7 +61,7 @@ primaryRays ~(Camera' cPos cDir cFov) = map transform
     -- we've calculated.
     planeCenter, planeTopOffset, planeRightOffset :: Exp (V3 Float)
     (planeCenter, planeTopOffset, planeRightOffset) =
-      let center = cPos + cDir ^* epsilon
+      let center = cPos + cDir ^* screenDistance
           centerOffset = center - cPos
           rightOffset = centerOffset `cross` up
           topOffset = (cDir `cross` rightOffset) ^/ screenAspect
@@ -108,32 +98,32 @@ traceRay limit scene = go limit
     -- recursivly call this function. If nothing gets hit or the bounce limit is
     -- reached, return black.
     go bounces ray =
-      if bounces == 0
-        then V3' 0.0 0.0 0.0
-        else let
-          f :: forall p. Primitive p => Exp p -> Exp (Float, (Normal, Material))
-          f p = T2 dist (hit ray dist p)
-            where
-              dist = fromMaybe infinite (distanceTo ray p)
+      let nextHit = closestIntersection scene ray
+       in if bounces == 0 || isNothing nextHit
+            then V3' 0.0 0.0 0.0
+            else let T2 (Ray' intersection iNormal) iMaterial = fromJust nextHit
+                     -- TODO: Add RNG
+                     nextRay = Ray' (intersection + iNormal ^* epsilon) iNormal
+                     emittance = (iMaterial ^. color) ^* (iMaterial ^. illuminance)
+                     brdf =
+                       2.0 * (iMaterial ^. specularity) *
+                       ((nextRay ^. direction) `dot` iNormal)
+                     reflected = go (bounces - 1) nextRay
+                  in emittance + (brdf *^ reflected)
 
-          closest_hit :: Exp (Normal, Material)
-          closest_hit = snd $ expMinWith fst $ mapScene f scene
-
-          reflection = go (bounces - 1) (fst closest_hit)
-
-          in V3' 0.0 0.0 0.0
-
--- | Find the nearest hit for a ray given a array of objects
---
--- we can map distanceTo{Sphere,Plane} on all opjects and use the `justs` function to
--- extract the Just Exps.
-castRay ::
-  (Exp obj -> Exp RayF -> Exp (Maybe Float))
-  -> Acc (Vector obj) -- the list of objects (must be the same type)
-  -> Exp RayF -- Ray with start and direction
-  -> Exp (Maybe (Float, obj)) -- Return hit?, distance and which object has been hit
-castRay = undefined
+closestIntersection :: Scene -> Exp RayF -> Exp (Maybe (Normal, Material))
+closestIntersection scene ray =
+  fmap snd $
+  expMinWith (maybe infinite fst) $
+  mapScene (\p -> pairHit p <$> distanceTo ray p) scene
+  where
+    pairHit p t = T2 t (hit ray t p)
 
 -- | Max possible value for a float, usefull as distance if there is not hit.
 infinite :: Exp Float
 infinite = encodeFloat 16777215 104
+
+-- | A small offset used to prevent rays from intersecting with the same object
+-- it last intersected with.
+epsilon :: Exp Float
+epsilon = 0.002
