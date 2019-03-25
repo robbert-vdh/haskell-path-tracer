@@ -48,7 +48,7 @@ instance Primitive Sphere where
       thc = sqrt (rad ** 2 - d2)
       t0 = tca - thc
       t1 = tca + thc
-      t = min t0 01
+      t = min t0 t1
 
   normal pos ~(Sphere' ori _ _) = normalize (pos - ori)
 
