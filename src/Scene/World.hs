@@ -4,17 +4,18 @@ import Scene.Objects
 
 import Linear
 
+-- TODO: All plane normals are inverted, so we should probably invert the plane
+--       intersection function instead
+
 getStartCamera :: Camera
 getStartCamera =
   Camera
-   -- { _cameraPosition = V3 1.0 (-1.6) (-4.8)
-    { _cameraPosition = V3 0 0 0
+    { _cameraPosition = V3 1.0 (-1.6) (-4.8)
    -- TODO: Use proper angles here. This should be implemented using quaternions
    --       and euler angles, but since we don't have any way to rotate the
    --       camera yet we'll just use looking direciton instead.
-   -- , _cameraDirection = normalize $ V3 0.3 (-0.3) 0.0
-   -- , _cameraDirection = normalize $ V3 (-0.1) (-0.1) (-1.0)
-    , _cameraDirection = normalize $ V3 0 0 (-1)
+   -- , _cameraDirection = normalize $ V3 0.3 (-0.3) 0.0 -- These are Euler angles
+    , _cameraDirection = normalize $ V3 0.1 (-0.01) (-1.0)
     , _cameraFov = 45
     }
 
@@ -64,7 +65,7 @@ getObjects =
         }
     ]
     [ Plane
-        { _planeDirection = V3 0.0 1.0 0.0
+        { _planeDirection = V3 0.0 (-1.0) 0.0
         , _planePosition = V3 0.0 (-3.0) 0.0
         , _planeMaterial =
             Material
@@ -74,7 +75,7 @@ getObjects =
               }
         }
     , Plane
-        { _planeDirection = V3 0.0 (-1.0) 0.0
+        { _planeDirection = V3 0.0 (1.0) 0.0
         , _planePosition = V3 0.0 10.0 0.0
         , _planeMaterial =
             Material
@@ -88,23 +89,25 @@ getObjects =
 getBasicObjects :: Scene
 getBasicObjects = Scene [sp] [pl]
   where
-    sp = Sphere
-      { _spherePosition = V3 0.0 0.0 (-2.0)
-      , _sphereRadius = 1.0
-      , _sphereMaterial =
-        Material
-          { _materialColor = V3 1.0 1.0 1.0
-          , _materialSpecularity = 0.7
-          , _materialIlluminance = 0.5
-          }
-      }
-    pl = Plane
-      { _planeDirection = V3 0.0 (-1.0) 0.0
-      , _planePosition = V3 0.0 (-1.0) 0.0
-      , _planeMaterial =
-          Material
-            { _materialColor = V3 1.0 1.0 1.0
-            , _materialSpecularity = 0.1
-            , _materialIlluminance = 0.8
-            }
-      }
+    sp =
+      Sphere
+        { _spherePosition = V3 0.0 0.0 (-2.0)
+        , _sphereRadius = 1.0
+        , _sphereMaterial =
+            Material
+              { _materialColor = V3 1.0 1.0 1.0
+              , _materialSpecularity = 0.7
+              , _materialIlluminance = 0.5
+              }
+        }
+    pl =
+      Plane
+        { _planeDirection = V3 0.0 (-1.0) 0.0
+        , _planePosition = V3 0.0 (-1.0) 0.0
+        , _planeMaterial =
+            Material
+              { _materialColor = V3 1.0 1.0 1.0
+              , _materialSpecularity = 0.1
+              , _materialIlluminance = 0.8
+              }
+        }

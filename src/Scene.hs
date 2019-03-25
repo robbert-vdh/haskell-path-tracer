@@ -34,11 +34,11 @@ render ::
   -> Acc (Matrix Color)
 render camera screen = zipWith (+) result
   where
-    hasHit ray = expAny isJust $ mapScene (distanceTo ray) getBasicObjects
+    hasHit ray = expAny isJust $ mapScene (distanceTo ray) getObjects
     -- TODO: Do some actual rendering here
     dist ray =
       expMin $
-      P.map (fromMaybe infinite) $ mapScene (distanceTo ray) getBasicObjects
+      P.map (fromMaybe infinite) $ mapScene (distanceTo ray) getObjects
     result =
       map
         (\(T2 r _) ->
@@ -52,19 +52,30 @@ render camera screen = zipWith (+) result
 -- format @V2 <0 .. screenWidth> <0 .. screenHeight>@.
 primaryRays ::
      Exp Camera -> Acc (Matrix (V2 Int, Int)) -> Acc (Matrix (RayF, Int))
-primaryRays ~(Camera' cPos cDir (toFloating -> cFov)) = map transform
+primaryRays ~(Camera' cPos cDir cFov) = map transform
   where
-    verticalFov :: Exp Float
-    -- TODO: This value is too high
-    verticalFov = 2.0 * atan (tan ((cFov * (pi / 180.0)) / 2.0) * screenAspect)
-    viewMatrix :: Exp (M44 Float)
-    viewMatrix =
-      -- TODO: This lookAt is not quite right apparently, but it works fine when
-      --       the camera is in the origin so we should fix this once we have
-      --       user input
-      lookAtScratch cPos (cPos + cDir) (V3' 0.0 1.0 0.0)
-      !*!
-      infinitePerspective verticalFov screenAspect 0.001
+    -- | The distance between the camera nd the virtual screen plane
+    --
+    -- TODO: This distance should be calculated based on the FoV
+    epsilon :: Exp Float
+    epsilon = 0.05
+    -- | The direction in world space that represents looking upwards. This is
+    -- used for calculating perspectives.
+    up :: Exp (V3 Float)
+    up = V3' 0 1 0
+
+    -- | The coordinates of a virtual screen plane. Instead of using regular
+    -- matrix transformations, we'll simply map every pixel on the screen to a
+    -- point on this virtual plane. We can then simply calculate the ray's
+    -- direction by drawing a line between the camera's origin and the point
+    -- we've calculated.
+    planeCenter, planeTopOffset, planeRightOffset :: Exp (V3 Float)
+    (planeCenter, planeTopOffset, planeRightOffset) =
+      let center = cPos + cDir ^* epsilon
+          centerOffset = center - cPos
+          rightOffset = centerOffset `cross` up
+          topOffset = (cDir `cross` rightOffset) ^/ screenAspect
+       in (center, topOffset, rightOffset)
 
     transform :: Exp (V2 Int, Int) -> Exp (RayF, Int)
     transform (T2 (vecToFloat -> rasterPos) seed) =
@@ -76,17 +87,10 @@ primaryRays ~(Camera' cPos cDir (toFloating -> cFov)) = map transform
           -- two.
           V2' screenX screenY = rasterPos / screenSize * 2.0 + V2' (-1.0) 1.0
 
-          nearPoint, farPoint :: Exp (V4 Float)
-          nearPoint = normalize $
-            viewMatrix !* point (V3' screenX (negate screenY) 0.0)
-          farPoint = normalize $
-            viewMatrix !* point (V3' screenX (negate screenY) 1.0)
-
-          -- TODO: This noramlize is not necesary and is here purely for
-          --       debugging purposes
+          virtualPoint :: Exp Position
+          virtualPoint = planeCenter + (planeRightOffset ^* screenX) + (planeTopOffset ^* screenY)
           rayDir :: Exp (V3 Float)
-          rayDir = normalize $ fromHomogeneous $ nearPoint - farPoint
-
+          rayDir = normalize $ virtualPoint - cPos
           ray :: Exp RayF
           ray = Ray' cPos rayDir
        in T2 ray seed
