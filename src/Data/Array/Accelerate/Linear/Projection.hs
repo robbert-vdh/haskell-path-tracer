@@ -104,3 +104,24 @@ infinitePerspective fovy a n =
     x = (2 * n) / (r - l)
     y = (2 * n) / (t - b)
     w = -2 * n
+
+inverseInfinitePerspective ::
+     Floating a
+  => Exp a -- ^ FOV (y direction, in radians)
+  -> Exp a -- ^ Aspect Ratio
+  -> Exp a -- ^ Near plane
+  -> Exp (M44 a)
+inverseInfinitePerspective fovy a n =
+  V4' (V4' rx 0 0 0)
+      (V4' 0 ry 0 0)
+      (V4' 0 0 0 (-1))
+      (V4' 0 0 rw (-rw))
+  where
+    t = n * tan (fovy / 2)
+    b = -t
+    l = b * a
+    r = t * a
+    hrn = 0.5 / n
+    rx = (r - l) * hrn
+    ry = (t - b) * hrn
+    rw = -hrn
