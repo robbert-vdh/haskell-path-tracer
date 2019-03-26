@@ -46,12 +46,8 @@ main = do
   _glContext <- glCreateContext window
   (program, vao) <- initResources
 
-  result <-
-    newMVar $!
-    Result
-      { _texture = compute initialOutput
-      , _iterations = 1
-      }
+  seeds <- initialOutput
+  result <- newMVar $! Result { _texture = compute seeds, _iterations = 1 }
   computationThreadId <- forkOS $ computationLoop result
   -- TODO: Pack all the things we reuse (Accelerate arrays, windows, programs,
   --       buffers etc.) in a struct

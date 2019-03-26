@@ -10,8 +10,10 @@ module Util where
 import Data.Array.Accelerate as A
 import Data.Array.Accelerate.Data.Functor as A
 import Data.Array.Accelerate.Linear as A
+import qualified System.Random.MWC as Rng
 
 import qualified Data.List as P
+import Prelude (return, IO)
 import qualified Prelude as P
 
 import Intersection
@@ -111,9 +113,13 @@ screenSize =
 -- | The output matrix initialized with all zero values and intiial seeds. This
 -- is used during the initialization and after moving the camera.
 --
--- TODO: Initialize RNG seed
-initialOutput :: A.Matrix (Color, Int)
-initialOutput = fromFunction screenShape $ const (V3 0.0 0.0 0.0, 1)
+-- TODO: Reseed the RNG after a certain number of iterations
+initialOutput :: IO (A.Matrix (Color, Int))
+initialOutput = do
+  rng <- Rng.create
+  fromFunctionM screenShape $ \_ -> do
+    seed <- Rng.uniform rng
+    return (V3 0.0 0.0 0.0, seed)
 
 -- | A matrix containing coordinates for every pixel on the screen. This is used
 -- to cast the actual rays.

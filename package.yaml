@@ -30,6 +30,7 @@ dependencies:
   - lens-accelerate
   - linear
   - linear-accelerate
+  - mwc-random
   - template-haskell
   - text
   - vector

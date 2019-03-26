@@ -15,16 +15,18 @@ import Util
 -- 'Debug.Trace' to debug expressions.
 computeDebug :: (Int, Int) -> IO ()
 computeDebug (x, y) = do
+  seeds <- initialOutput
   let pixels = fromList (Z :. 1 :. 1) [V2 x y]
-      result = toList $ Interpreter.runN (render theCamera) pixels initialOutput
+      result = toList $ Interpreter.runN (render theCamera) pixels seeds
 
   putStrLn $ show (x, y) ++ " -> " ++ show result
 
 -- | Compute and print the colour values for the given screen pixels.
 computePixels :: [(Int, Int)] -> IO ()
 computePixels points = do
+  seeds <- initialOutput
   let pixels = fromList (Z :. 1 :. P.length points) $ P.map (uncurry V2) points
-      result = toList $ runN (render theCamera) pixels initialOutput
+      result = toList $ runN (render theCamera) pixels seeds
 
   putStrLn $
     intercalate "\n" $
