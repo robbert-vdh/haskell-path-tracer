@@ -9,7 +9,6 @@ module Util where
 
 import Data.Array.Accelerate as A
 import Data.Array.Accelerate.Data.Functor as A
-import Data.Array.Accelerate.Data.Maybe as A
 import Data.Array.Accelerate.Linear as A
 
 import qualified Data.List as P
@@ -109,17 +108,17 @@ screenSize :: Exp (V2 Float)
 screenSize =
   V2' (P.fromIntegral screenWidth) (P.fromIntegral $ negate screenHeight)
 
--- | The output matrix initialized with all zero values. This is used during the
--- initialization and after moving the camera.
-initialOutput :: A.Matrix Color
-initialOutput = fromFunction screenShape $ const $ V3 0.0 0.0 0.0
+-- | The output matrix initialized with all zero values and intiial seeds. This
+-- is used during the initialization and after moving the camera.
+--
+-- TODO: Initialize RNG seed
+initialOutput :: A.Matrix (Color, Int)
+initialOutput = fromFunction screenShape $ const (V3 0.0 0.0 0.0, 1)
 
 -- | A matrix containing coordinates for every pixel on the screen. This is used
 -- to cast the actual rays.
---
--- TODO: Add RNG seeds here
-screenPixels :: (A.Matrix (V2 Int, Int))
-screenPixels = A.fromFunction screenShape $ \(Z :. y :. x) -> (V2 x y, 1)
+screenPixels :: (A.Matrix (V2 Int))
+screenPixels = A.fromFunction screenShape $ \(Z :. y :. x) -> V2 x y
 
 -- | The size of the output as an array shape.
 screenShape :: Z :. Int :. Int

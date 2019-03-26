@@ -5,6 +5,7 @@
 module Main where
 
 import Control.Concurrent
+import Control.Exception
 import Control.Lens
 import Control.Monad (unless)
 import qualified Data.Array.Accelerate as A
@@ -25,7 +26,7 @@ import TH
 import Util
 
 data Result = Result
-  { _texture :: A.Matrix Color
+  { _texture :: A.Matrix (Color, Int)
   , _iterations :: Int
   }
 
@@ -48,7 +49,7 @@ main = do
   result <-
     newMVar $!
     Result
-      { _texture = compute screenPixels initialOutput
+      { _texture = compute initialOutput
       , _iterations = 1
       }
   computationThreadId <- forkOS $ computationLoop result
@@ -63,10 +64,9 @@ main = do
 -- TODO: The camera is hardcoded for now, but this obviously should not be the
 --       case!
 compute ::
-     A.Array A.DIM2 (V2 Int, Int)
-  -> A.Array A.DIM2 Color
-  -> A.Array A.DIM2 Color
-compute = runN $! render theCamera
+     A.Array A.DIM2 (Color, Int)
+  -> A.Array A.DIM2 (Color, Int)
+compute = runN (render theCamera) screenPixels
 
 -- | Perform the actual path tracing. This is done in a seperate thread that
 -- shares and 'MVar' with the rendering thread to prevent one of the processes
@@ -75,9 +75,12 @@ computationLoop :: MVar Result -> IO ()
 computationLoop mResult = readMVar mResult >>= go
   where
     go result = do
-      let texture' = compute screenPixels $ result ^. texture
-          result' = result & texture .~ texture' & iterations +~ 1
+      -- HACK: This evaluate is needed because we don't actually read fromt he
+      --       MVar here
+      texture' <- evaluate $! compute $ result ^. texture
+      let result' = result & texture .~ texture' & iterations +~ 1
       _ <- swapMVar mResult $! result'
+      print $ result ^. iterations
       go result'
 
 -- | Perform all the necesary I/O to handle user input and to render the texture
@@ -105,7 +108,7 @@ graphicsLoop window program vao mResult = do
   -- XXX: This is a LOT faster than using 'A.toList' but I feel dirty even
   --      looking at it. Is there really not a better way?
   result <- readMVar mResult
-  let ((((), r), g), b) = A.toVectors $ result ^. texture
+  let (((), ((((), r), g), b)), _) = A.toVectors $ result ^. texture
       pixelBuffer = V.zipWith3 V3 r g b
 
   V2 width height <- get $ windowSize window

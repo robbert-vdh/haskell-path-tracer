@@ -30,18 +30,20 @@ import Util
 -- generated sample.
 render ::
      Exp Camera
-  -> Acc (Matrix (V2 Int, Int))
-  -> Acc (Matrix Color)
-  -> Acc (Matrix Color)
-render camera screen = zipWith (+) result
+  -> Acc (Matrix (V2 Int))
+  -> Acc (Matrix (Color, Int))
+  -> Acc (Matrix (Color, Int))
+render camera screen acc = zipWith (\(T2 new seed) (T2 old _) -> T2 (new + old) seed) result acc
   where
-    result = map (traceRay 20 getObjects . fst) $ primaryRays camera screen
+    rays = primaryRays camera screen
+    seeds = map snd acc
+    result = map (traceRay 20 getObjects) $ zip rays seeds
 
 -- | Calculate the origin and directions of the primary rays based on a camera
 -- and a matrix of screen pixel positions. These positions should be in the
 -- format @V2 <0 .. screenWidth> <0 .. screenHeight>@.
 primaryRays ::
-     Exp Camera -> Acc (Matrix (V2 Int, Int)) -> Acc (Matrix (RayF, Int))
+     Exp Camera -> Acc (Matrix (V2 Int)) -> Acc (Matrix RayF)
 primaryRays ~(Camera' cPos cDir cFov) = map transform
   where
     -- | The distance between the camera nd the virtual screen plane
@@ -67,8 +69,8 @@ primaryRays ~(Camera' cPos cDir cFov) = map transform
           topOffset = (cDir `cross` rightOffset) ^/ screenAspect
        in (center, topOffset, rightOffset)
 
-    transform :: Exp (V2 Int, Int) -> Exp (RayF, Int)
-    transform (T2 (vecToFloat -> rasterPos) seed) =
+    transform :: Exp (V2 Int) -> Exp RayF
+    transform (vecToFloat -> rasterPos) =
       let -- Screen space is the space where both X and Y coordinates lie within
           -- the @[-1, 1]@ interval. Here @(-1, -1)@ is the bottom left and @(1,
           -- 1)@ is the top right corner. Because of this the @y@ axis has to be
@@ -81,9 +83,7 @@ primaryRays ~(Camera' cPos cDir cFov) = map transform
           virtualPoint = planeCenter + (planeRightOffset ^* screenX) + (planeTopOffset ^* screenY)
           rayDir :: Exp (V3 Float)
           rayDir = normalize $ virtualPoint - cPos
-          ray :: Exp RayF
-          ray = Ray' cPos rayDir
-       in T2 ray seed
+       in Ray' cPos rayDir
 
 -- ** Single ray, multiple objects
 
@@ -99,15 +99,16 @@ primaryRays ~(Camera' cPos cDir cFov) = map transform
 -- TODO: The BRDF is rather simplistic and should be expanded upon
 -- TODO: The BRDF does not take distance into account
 -- TODO: Add RNG (to the nextRay)
-traceRay :: Exp Int -> Scene -> Exp RayF -> Exp Color
+traceRay :: Exp Int -> Scene -> Exp (RayF, Int) -> Exp (Color, Int)
 traceRay limit scene primaryRay =
-  iterate limit go (T3 primaryRay (V3' 0 0 0) 1.0) ^. _2
+  let T3 (T2 _ seed) result _ = iterate limit go (T3 primaryRay (V3' 0 0 0) 1.0)
+   in T2 result seed
   where
-    go :: Exp (RayF, Color, Float) -> Exp (RayF, Color, Float)
-    go (T3 ray result multiplier) =
+    go :: Exp ((RayF, Int), Color, Float) -> Exp ((RayF, Int), Color, Float)
+    go (T3 (T2 ray seed) result multiplier) =
       let nextHit = closestIntersection scene ray
        in if nearZero multiplier || isNothing nextHit
-            then T3 ray result 0.0
+            then T3 (T2 ray seed) result 0.0
             else let T2 (Ray' intersection iNormal) iMaterial = fromJust nextHit
                      nextRay = Ray' (intersection + iNormal ^* epsilon) iNormal
                      emittance =
@@ -116,7 +117,7 @@ traceRay limit scene primaryRay =
                        2.0 * (iMaterial ^. specularity) *
                        ((nextRay ^. direction) `dot` iNormal)
                   in T3
-                       nextRay
+                       (T2 nextRay seed)
                        (result + (emittance ^* multiplier))
                        (multiplier * brdf)
 
