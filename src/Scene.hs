@@ -93,8 +93,6 @@ primaryRays ~(Camera' cPos cDir cFov) = map transform
 --
 -- TODO: The BRDF is rather simplistic and should be expanded upon
 -- TODO: The BRDF does not take distance into account
--- TODO: The emittance should probably also be scaled based on the angle of the
---       intersection
 -- TODO: Add RNG (to the nextRay)
 traceRay :: Exp Int -> Scene -> Exp RayF -> Exp Color
 traceRay limit scene ray =
@@ -109,6 +107,8 @@ traceRay limit scene ray =
                    ((nextRay ^. direction) `dot` iNormal)
                  reflected = traceRay (limit - 1) scene nextRay
               in emittance + (brdf *^ reflected)
+
+{-# INLINE traceRay #-}
 
 closestIntersection :: Scene -> Exp RayF -> Exp (Maybe (Normal, Material))
 closestIntersection scene ray =
