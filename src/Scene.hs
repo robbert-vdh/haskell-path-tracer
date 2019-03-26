@@ -87,29 +87,28 @@ primaryRays ~(Camera' cPos cDir cFov) = map transform
 
 -- ** Single ray, multiple objects
 
--- | A function which calculates the resulting color given a bounce limit,
--- a scene and a ray.
+-- | Calculate the amount of light that a given ray would collect when shot into
+-- the scene. In other words, calculate what color the pixel that corresponds to
+-- the ray should be.
+--
+-- TODO: The BRDF is rather simplistic and should be expanded upon
+-- TODO: The BRDF does not take distance into account
+-- TODO: The emittance should probably also be scaled based on the angle of the
+--       intersection
+-- TODO: Add RNG (to the nextRay)
 traceRay :: Exp Int -> Scene -> Exp RayF -> Exp Color
-traceRay limit scene = go limit
-  where
-    go :: Exp Int -> Exp RayF -> Exp Color
-    -- If not, check if a ray from position @pos@ going in direction @dir@
-    -- itersects with anything in the scene. If it does calculate reflection and
-    -- recursivly call this function. If nothing gets hit or the bounce limit is
-    -- reached, return black.
-    go bounces ray =
-      let nextHit = closestIntersection scene ray
-       in if bounces == 0 || isNothing nextHit
-            then V3' 0.0 0.0 0.0
-            else let T2 (Ray' intersection iNormal) iMaterial = fromJust nextHit
-                     -- TODO: Add RNG
-                     nextRay = Ray' (intersection + iNormal ^* epsilon) iNormal
-                     emittance = (iMaterial ^. color) ^* (iMaterial ^. illuminance)
-                     brdf =
-                       2.0 * (iMaterial ^. specularity) *
-                       ((nextRay ^. direction) `dot` iNormal)
-                     reflected = go (bounces - 1) nextRay
-                  in emittance + (brdf *^ reflected)
+traceRay limit scene ray =
+  let nextHit = closestIntersection scene ray
+   in if limit == 0 || isNothing nextHit
+        then V3' 0.0 0.0 0.0
+        else let T2 (Ray' intersection iNormal) iMaterial = fromJust nextHit
+                 nextRay = Ray' (intersection + iNormal ^* epsilon) iNormal
+                 emittance = (iMaterial ^. color) ^* (iMaterial ^. illuminance)
+                 brdf =
+                   2.0 * (iMaterial ^. specularity) *
+                   ((nextRay ^. direction) `dot` iNormal)
+                 reflected = traceRay (limit - 1) scene nextRay
+              in emittance + (brdf *^ reflected)
 
 closestIntersection :: Scene -> Exp RayF -> Exp (Maybe (Normal, Material))
 closestIntersection scene ray =
