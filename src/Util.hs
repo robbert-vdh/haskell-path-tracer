@@ -37,15 +37,18 @@ vecToFloat = fmap toFloating
 -- | Use a linear congruential pseudo random number generator to generate a
 -- 'Float' from a seed. The result consists of the generated float and a new
 -- seed. The generated floats are in the `[-1, 1]` range.
-genFloat :: Exp Word32 -> Exp (Float, Word32)
-genFloat seed = T2 nextFloat nextSeed
+--
+-- The function returns a tuple of 'Exp's instead of a single 'Exp' tuple so we
+-- can make use of the state monad.
+genFloat :: Exp Word32 -> (Exp Float, Exp Word32)
+genFloat seed = (nextFloat, nextSeed)
   where
-    modulus = 2 ^ (32 :: Exp Word32)
     multiplier = 1664525
     increment = 1013904223
-    nextSeed = ((multiplier * seed) + increment) `mod` modulus
 
-    nextFloat = fromIntegral nextSeed / (fromIntegral modulus / 2) - 1
+    -- We use 2^32 as a modulus1013904223 so we can simply let the result wrap around
+    nextSeed = (multiplier * seed) + increment
+    nextFloat = fromIntegral nextSeed / (2 ** 31) - 1
 
 -- ** Mapping and folding over a scene
 --
