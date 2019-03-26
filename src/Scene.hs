@@ -91,24 +91,34 @@ primaryRays ~(Camera' cPos cDir cFov) = map transform
 -- the scene. In other words, calculate what color the pixel that corresponds to
 -- the ray should be.
 --
+-- Because if the way Accelerate is structured, we had to invert the recursive
+-- flow. Instead of returning @emittance + (brdf * traceRay (limit - 1) scene
+-- nextRay)@, we return @old_result + (emittance * multiplier)@, where
+-- multiplier is a comulative product of the BRDFs.
+--
 -- TODO: The BRDF is rather simplistic and should be expanded upon
 -- TODO: The BRDF does not take distance into account
 -- TODO: Add RNG (to the nextRay)
 traceRay :: Exp Int -> Scene -> Exp RayF -> Exp Color
-traceRay limit scene ray =
-  let nextHit = closestIntersection scene ray
-   in if limit == 0 || isNothing nextHit
-        then V3' 0.0 0.0 0.0
-        else let T2 (Ray' intersection iNormal) iMaterial = fromJust nextHit
-                 nextRay = Ray' (intersection + iNormal ^* epsilon) iNormal
-                 emittance = (iMaterial ^. color) ^* (iMaterial ^. illuminance)
-                 brdf =
-                   2.0 * (iMaterial ^. specularity) *
-                   ((nextRay ^. direction) `dot` iNormal)
-                 reflected = traceRay (limit - 1) scene nextRay
-              in emittance + (brdf *^ reflected)
-
-{-# INLINE traceRay #-}
+traceRay limit scene primaryRay =
+  iterate limit go (T3 primaryRay (V3' 0 0 0) 1.0) ^. _2
+  where
+    go :: Exp (RayF, Color, Float) -> Exp (RayF, Color, Float)
+    go (T3 ray result multiplier) =
+      let nextHit = closestIntersection scene ray
+       in if nearZero multiplier || isNothing nextHit
+            then T3 ray result 0.0
+            else let T2 (Ray' intersection iNormal) iMaterial = fromJust nextHit
+                     nextRay = Ray' (intersection + iNormal ^* epsilon) iNormal
+                     emittance =
+                       (iMaterial ^. color) ^* (iMaterial ^. illuminance)
+                     brdf =
+                       2.0 * (iMaterial ^. specularity) *
+                       ((nextRay ^. direction) `dot` iNormal)
+                  in T3
+                       nextRay
+                       (result + (emittance ^* multiplier))
+                       (multiplier * brdf)
 
 closestIntersection :: Scene -> Exp RayF -> Exp (Maybe (Normal, Material))
 closestIntersection scene ray =
