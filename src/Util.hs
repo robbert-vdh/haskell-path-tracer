@@ -34,6 +34,19 @@ vecToFloat ::
      (Functor f, Elt (f Int), Elt (f Float)) => Exp (f Int) -> Exp (f Float)
 vecToFloat = fmap toFloating
 
+-- | Use a linear congruential pseudo random number generator to generate a
+-- 'Float' from a seed. The result consists of the generated float and a new
+-- seed. The generated floats are in the `[-1, 1]` range.
+genFloat :: Exp Word32 -> Exp (Float, Word32)
+genFloat seed = T2 nextFloat nextSeed
+  where
+    modulus = 2 ^ (32 :: Exp Word32)
+    multiplier = 1664525
+    increment = 1013904223
+    nextSeed = ((multiplier * seed) + increment) `mod` modulus
+
+    nextFloat = fromIntegral nextSeed / (fromIntegral modulus / 2) - 1
+
 -- ** Mapping and folding over a scene
 --
 -- Accelerate does not support sum types (yet), but we still want a nice and
@@ -114,7 +127,7 @@ screenSize =
 -- is used during the initialization and after moving the camera.
 --
 -- TODO: Reseed the RNG after a certain number of iterations
-initialOutput :: IO (A.Matrix (Color, Int))
+initialOutput :: IO (A.Matrix (Color, Word32))
 initialOutput = do
   rng <- Rng.create
   fromFunctionM screenShape $ \_ -> do

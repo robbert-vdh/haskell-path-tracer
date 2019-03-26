@@ -31,8 +31,8 @@ import Util
 render ::
      Exp Camera
   -> Acc (Matrix (V2 Int))
-  -> Acc (Matrix (Color, Int))
-  -> Acc (Matrix (Color, Int))
+  -> Acc (Matrix (Color, Word32))
+  -> Acc (Matrix (Color, Word32))
 render camera screen acc = zipWith (\(T2 new seed) (T2 old _) -> T2 (new + old) seed) result acc
   where
     rays = primaryRays camera screen
@@ -99,12 +99,12 @@ primaryRays ~(Camera' cPos cDir cFov) = map transform
 -- TODO: The BRDF is rather simplistic and should be expanded upon
 -- TODO: The BRDF does not take distance into account
 -- TODO: Add RNG (to the nextRay)
-traceRay :: Exp Int -> Scene -> Exp (RayF, Int) -> Exp (Color, Int)
+traceRay :: Exp Int -> Scene -> Exp (RayF, Word32) -> Exp (Color, Word32)
 traceRay limit scene primaryRay =
   let T3 (T2 _ seed) result _ = iterate limit go (T3 primaryRay (V3' 0 0 0) 1.0)
    in T2 result seed
   where
-    go :: Exp ((RayF, Int), Color, Float) -> Exp ((RayF, Int), Color, Float)
+    go :: Exp ((RayF, Word32), Color, Float) -> Exp ((RayF, Word32), Color, Float)
     go (T3 (T2 ray seed) result multiplier) =
       let nextHit = closestIntersection scene ray
        in if nearZero multiplier || isNothing nextHit

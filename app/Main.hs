@@ -12,6 +12,7 @@ import qualified Data.Array.Accelerate as A
 import qualified Data.Array.Accelerate.IO.Data.Vector.Storable as A
 import qualified Data.Text as T
 import qualified Data.Vector.Storable as V
+import Data.Word (Word32)
 import Data.Vector.Storable (unsafeWith)
 import Foreign.C.Types (CInt(..))
 import qualified Graphics.GLUtil as GLU
@@ -26,7 +27,7 @@ import TH
 import Util
 
 data Result = Result
-  { _texture :: A.Matrix (Color, Int)
+  { _texture :: A.Matrix (Color, Word32)
   , _iterations :: Int
   }
 
@@ -60,8 +61,8 @@ main = do
 -- TODO: The camera is hardcoded for now, but this obviously should not be the
 --       case!
 compute ::
-     A.Array A.DIM2 (Color, Int)
-  -> A.Array A.DIM2 (Color, Int)
+     A.Array A.DIM2 (Color, Word32)
+  -> A.Array A.DIM2 (Color, Word32)
 compute = runN (render theCamera) screenPixels
 
 -- | Perform the actual path tracing. This is done in a seperate thread that
