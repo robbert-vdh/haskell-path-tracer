@@ -46,7 +46,7 @@ genFloat seed = (nextFloat, nextSeed)
     multiplier = 1664525
     increment = 1013904223
 
-    -- We use 2^32 as a modulus1013904223 so we can simply let the result wrap around
+    -- We use 2^32 as a modulus so we can simply let the result wrap around
     nextSeed = (multiplier * seed) + increment
     nextFloat = fromIntegral nextSeed / (2 ** 31) - 1
 
