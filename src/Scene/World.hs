@@ -31,9 +31,9 @@ getObjects =
         , _sphereRadius = 1.5
         , _sphereMaterial =
             Material
-              { _materialColor = V3 0.0 1.0 0.0
-              , _materialSpecularity = 0.4
-              , _materialIlluminance = 1.0
+              { _materialColor = V3 0.0 0.4 0.0
+              , _materialSpecularity = 0.9
+              , _materialIlluminance = 14.20
               }
         }
     , Sphere
@@ -41,9 +41,9 @@ getObjects =
         , _sphereRadius = 0.3
         , _sphereMaterial =
             Material
-              { _materialColor = V3 0.0 0.0 1.0
+              { _materialColor = V3 0.0 0.0 0.9
               , _materialSpecularity = 0.0
-              , _materialIlluminance = 1.5
+              , _materialIlluminance = 2.0
               }
         }
     , Sphere
@@ -51,9 +51,9 @@ getObjects =
         , _sphereRadius = 0.5
         , _sphereMaterial =
             Material
-              { _materialColor = V3 0.5 0.5 0.5
+              { _materialColor = V3 0.8 0.8 0.8
               , _materialSpecularity = 0.0
-              , _materialIlluminance = 0.0
+              , _materialIlluminance = 100.0
               }
         }
     ]
@@ -63,7 +63,7 @@ getObjects =
         , _planeMaterial =
             Material
               { _materialColor = V3 0.0 0.0 0.0
-              , _materialSpecularity = 0.7
+              , _materialSpecularity = 1.0
               , _materialIlluminance = 0.0
               }
         }
