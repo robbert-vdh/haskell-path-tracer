@@ -7,13 +7,14 @@
 
 module Util where
 
+import Control.Monad.Trans.State.Strict (runState, state)
 import Data.Array.Accelerate as A
-import Data.Array.Accelerate.Data.Functor as A
+import Data.Array.Accelerate.Data.Functor as A hiding ((<$>))
 import Data.Array.Accelerate.Linear as A
 import qualified System.Random.MWC as Rng
 
 import qualified Data.List as P
-import Prelude (return, IO)
+import Prelude ((<$>), (<*>), return, IO)
 import qualified Prelude as P
 
 import Intersection
@@ -49,6 +50,13 @@ genFloat seed = (nextFloat, nextSeed)
     -- We use 2^32 as a modulus so we can simply let the result wrap around
     nextSeed = (multiplier * seed) + increment
     nextFloat = fromIntegral nextSeed / (2 ** 31) - 1
+
+-- | Generate a random vector whose three values are in the range @[-1, 1]@.
+-- This value can be used to create a quaternion for rotation a vector.
+genVec :: Exp Word32 -> Exp (V3 Float, Word32)
+genVec seed = P.uncurry T2 $ runState (V3' <$> rng <*> rng <*> rng) seed
+  where
+    rng = state genFloat
 
 -- ** Mapping and folding over a scene
 --

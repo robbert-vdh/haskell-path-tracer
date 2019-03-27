@@ -32,6 +32,7 @@ dependencies:
   - linear-accelerate
   - mwc-random
   - template-haskell
+  - transformers
   - text
   - vector
 
