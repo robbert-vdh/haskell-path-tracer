@@ -27,13 +27,21 @@ import Scene.World
 import Util
 
 -- | Render a single sample, combining the previous results with the newly
--- generated sample.
+-- generated sample. This result is an array of color values summed over the
+-- entire runtime of the application (or until the rendering gets reset). The
+-- sums can then be divided by the number of samples directly in an OpenGL
+-- fragment shader to obtain the final per-pixel averages.
+--
+-- The general idea behind this function is that the result of a previous
+-- calculation can the passed on to the next function call. This way we can also
+-- reuse our RNG seeds for multiple samples.
 render ::
      Exp Camera
-  -> Acc (Matrix (V2 Int))
-  -> Acc (Matrix (Color, Word32))
-  -> Acc (Matrix (Color, Word32))
-render camera screen acc = zipWith (\(T2 new seed) (T2 old _) -> T2 (new + old) seed) result acc
+  -> Acc (Matrix (V2 Int)) -- ^ Screen pixel coordinates
+  -> Acc (Matrix (Color, Word32)) -- ^ Accumulated results and RNG seeds
+  -> Acc (Matrix (Color, Word32)) -- ^ New results and new RNG seeds
+render camera screen acc =
+  zipWith (\(T2 new seed) (T2 old _) -> T2 (new + old) seed) result acc
   where
     rays = primaryRays camera screen
     seeds = map snd acc
@@ -114,8 +122,7 @@ traceRay limit scene primaryRay =
                      nextDirection = rotate (anglesToQuaternion pi rotationVector) iNormal
                      nextRay = Ray' (intersection + nextDirection ^* epsilon) nextDirection
 
-                     emittance =
-                       (iMaterial ^. color) ^* (iMaterial ^. illuminance)
+                     emittance = (iMaterial ^. color) ^* (iMaterial ^. illuminance)
                      brdf =
                        2.0 * (iMaterial ^. specularity) *
                        ((nextRay ^. direction) `dot` iNormal)
