@@ -63,7 +63,7 @@ getObjects =
         , _planeMaterial =
             Material
               { _materialColor = V3 0.0 0.0 0.0
-              , _materialSpecularity = 1.0
+              , _materialSpecularity = 0.9
               , _materialIlluminance = 0.0
               }
         }

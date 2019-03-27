@@ -40,7 +40,7 @@ main = do
   window <-
     createWindow (T.pack "Leipe Mocro Tracer") $
     defaultWindow
-      { windowInputGrabbed = False -- Change this to True when implementing user input
+      { windowInputGrabbed = True -- Change this to True when implementing user input
       , windowInitialSize = V2 (CInt screenWidth) (CInt screenHeight)
       , windowOpenGL = Just defaultOpenGL {glProfile = Core Normal 3 3}
       }
@@ -78,7 +78,21 @@ computationLoop mResult = readMVar mResult >>= go
       let result' = result & texture .~ texture' & iterations +~ 1
       _ <- swapMVar mResult $! result'
       print $ result ^. iterations
-      go result'
+
+      -- Reset image with space press
+      keysState <- getKeyboardState
+      let spaceDown = keysState ScancodeSpace
+
+      if spaceDown
+        then do
+          emptyOutput <- initialOutput
+          go $ result' & iterations .~ 1 & texture .~ emptyOutput
+        else go result'
+
+-- getWASD :: (Scancode -> Bool) -> m String
+-- getWASD ks = do
+--   wasd <- map ks [ScancodeW, ScancodeA, ScancodeS, ScancodeD]
+--   return [l | (l, c) <- (zip "WASD" wasd), c]
 
 -- | Perform all the necesary I/O to handle user input and to render the texture
 -- created by Accelerate using OpenGL. The state is read by copying from an
