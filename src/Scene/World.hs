@@ -37,7 +37,7 @@ getObjects =
             Material
               { _materialColor = V3 0.0 1.0 0.0
               , _materialSpecularity = 0.4
-              , _materialIlluminance = 0.0
+              , _materialIlluminance = 1.0
               }
         }
     , Sphere
