@@ -94,8 +94,6 @@ mapScene ::
   -> [Exp a]
 mapScene f (Scene s p) = P.map (f . constant) s P.++ P.map (f . constant) p
 
--- TODO: Think of a better naming scheme for these functions over @[Exp a]@
-
 -- | Determines whether the predicate returns 'True' for any value in the list.
 expAny :: (Exp a -> Exp Bool) -> [Exp a] -> Exp Bool
 expAny f = P.foldr (\x acc -> acc || f x) (constant False)

@@ -72,9 +72,6 @@ data Sphere = Sphere
 --
 -- Since Sphere, Plane and Light do not have a type parameter we can't make use
 -- 'liftLens' or `unlift`, so we'll just define some simple getters ourselves.
---
--- ** TODO: Decide on whether we actually need these now that pattern synonyms
---          are a thing
 
 makeFields ''Scene
 
