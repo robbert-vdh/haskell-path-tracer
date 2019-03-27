@@ -41,8 +41,14 @@ vecToFloat = fmap toFloating
 --
 -- The function returns a tuple of 'Exp's instead of a single 'Exp' tuple so we
 -- can make use of the state monad.
-genFloat :: Exp Word32 -> (Exp Float, Exp Word32)
-genFloat seed = (nextFloat, nextSeed)
+genFloat :: Exp Word32 -> Exp (Float, Word32)
+genFloat = P.uncurry T2 . genFloat'
+
+-- | The same function as 'genFloat', but with the result and the next seed
+-- split into a tuple of 'Exp's instead of a single 'Exp' tuple. This is so we
+-- can use the state monad to thread the seed to multiple calculations.
+genFloat' :: Exp Word32 -> (Exp Float, Exp Word32)
+genFloat' seed = (nextFloat, nextSeed)
   where
     multiplier = 1664525
     increment = 1013904223
@@ -56,7 +62,7 @@ genFloat seed = (nextFloat, nextSeed)
 genVec :: Exp Word32 -> Exp (V3 Float, Word32)
 genVec seed = P.uncurry T2 $ runState (V3' <$> rng <*> rng <*> rng) seed
   where
-    rng = state genFloat
+    rng = state genFloat'
 
 -- ** Mapping and folding over a scene
 --
