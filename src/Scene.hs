@@ -97,8 +97,8 @@ primaryRays ~(Camera' cPos cDir cFov) = map transform
 -- multiplier is a comulative product of the BRDFs.
 --
 -- TODO: The BRDF is rather simplistic and should be expanded upon
--- TODO: The BRDF does not take distance into account
--- TODO: Add RNG (to the nextRay)
+-- TODO: The BRDF should probably take the material of non-illuminating props
+--       into account (a red ball should not be able to reflect green light)
 traceRay :: Exp Int -> Scene -> Exp (RayF, Word32) -> Exp (Color, Word32)
 traceRay limit scene primaryRay =
   let T3 (T2 _ seed) result _ = iterate limit go (T3 primaryRay (V3' 0 0 0) 1.0)
@@ -110,14 +110,20 @@ traceRay limit scene primaryRay =
        in if nearZero multiplier || isNothing nextHit
             then T3 (T2 ray seed) result 0.0
             else let T2 (Ray' intersection iNormal) iMaterial = fromJust nextHit
-                     nextRay = Ray' (intersection + iNormal ^* epsilon) iNormal
+                     T2 rotationVector nextSeed = genVec seed
+                     -- TODO: This is INCORRECT, but I wanted to know what would
+                     --       happen anyway. It looks correct, but I feel like
+                     --       it shouldn't be.
+                     nextDirection = rotate (axisAngle rotationVector 1) iNormal
+                     nextRay = Ray' (intersection + nextDirection ^* epsilon) nextDirection
+
                      emittance =
                        (iMaterial ^. color) ^* (iMaterial ^. illuminance)
                      brdf =
                        2.0 * (iMaterial ^. specularity) *
                        ((nextRay ^. direction) `dot` iNormal)
                   in T3
-                       (T2 nextRay seed)
+                       (T2 nextRay nextSeed)
                        (result + (emittance ^* multiplier))
                        (multiplier * brdf)
 
