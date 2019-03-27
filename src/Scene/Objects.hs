@@ -24,6 +24,8 @@ import qualified Prelude
 
 -- * Objects
 
+-- TODO: Rename the first two type synonyms @Point@ and @Vector@ to reduce
+--       confusion
 type Position = V3 Float
 type Direction = V3 Float
 type Color = V3 Float
@@ -36,7 +38,7 @@ data Scene = Scene
 
 data Camera = Camera
   { _cameraPosition :: Position
-  , _cameraDirection :: Direction
+  , _cameraRotation :: Direction
   , _cameraFov :: Int
   } deriving (Prelude.Eq, Show, Typeable, Generic, Elt, IsProduct cst)
 
@@ -82,8 +84,6 @@ instance HasColor Material Color where
 
 class HasDirection t a | t -> a where
   direction :: Getter (Exp t) (Exp a)
-instance HasDirection Camera Direction where
-  direction = to $ \t -> Exp $ SuccTupIdx ZeroTupIdx `Prj` t
 instance HasDirection Plane Direction where
   direction = to $ \t -> Exp $ SuccTupIdx (SuccTupIdx ZeroTupIdx) `Prj` t
 instance Elt a => HasDirection (Ray a) (V3 a) where
@@ -124,6 +124,11 @@ class HasRadius t a | t -> a where
   radius :: Getter (Exp t) (Exp a)
 instance HasRadius Sphere Float where
   radius = to $ \t -> Exp $ SuccTupIdx ZeroTupIdx `Prj` t
+
+class HasRotation t a | t -> a where
+  rotation :: Getter (Exp t) (Exp a)
+instance HasRotation Camera Direction where
+  rotation = to $ \t -> Exp $ SuccTupIdx ZeroTupIdx `Prj` t
 
 class HasSpecularity t a | t -> a where
   specularity :: Getter (Exp t) (Exp a)

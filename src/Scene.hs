@@ -44,17 +44,17 @@ render camera screen acc = zipWith (\(T2 new seed) (T2 old _) -> T2 (new + old) 
 -- format @V2 <0 .. screenWidth> <0 .. screenHeight>@.
 primaryRays ::
      Exp Camera -> Acc (Matrix (V2 Int)) -> Acc (Matrix RayF)
-primaryRays ~(Camera' cPos cDir cFov) = map transform
+primaryRays ~(Camera' cPos cRot cFov) = map transform
   where
     -- | The distance between the camera nd the virtual screen plane
     --
     -- TODO: This distance should be calculated based on the FoV
     screenDistance :: Exp Float
     screenDistance = 0.05
-    -- | The direction in world space that represents looking upwards. This is
-    -- used for calculating perspectives.
-    up :: Exp (V3 Float)
-    up = V3' 0 1 0
+
+    -- | The looking direciton of the camera.
+    cDir :: Exp Direction
+    cDir = anglesToDirection cRot
 
     -- | The coordinates of a virtual screen plane. Instead of using regular
     -- matrix transformations, we'll simply map every pixel on the screen to a
@@ -65,7 +65,7 @@ primaryRays ~(Camera' cPos cDir cFov) = map transform
     (planeCenter, planeTopOffset, planeRightOffset) =
       let center = cPos + cDir ^* screenDistance
           centerOffset = center - cPos
-          rightOffset = centerOffset `cross` up
+          rightOffset = centerOffset `cross` constant upVector
           topOffset = (cDir `cross` rightOffset) ^/ screenAspect
        in (center, topOffset, rightOffset)
 

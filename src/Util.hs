@@ -24,6 +24,13 @@ import Scene.World (getStartCamera)
 -- * Functions
 -- ** Vector operations
 
+-- | Convert the euler angles stored in the 'Camera' to a looking direction
+--
+-- TODO: Find out whether this normalize is necesary
+anglesToDirection :: Exp Direction -> Exp Direction
+anglesToDirection angles =
+  normalize $ rotate (anglesToQuaternion 1 angles) $ constant forwardVector
+
 -- | Convert an unnormalized euler axis rotation vector into a 'Quaternion'.
 anglesToQuaternion :: Exp Float -> Exp Direction -> Exp (Quaternion Float)
 anglesToQuaternion scale angles = axisAngle angles $ scale * norm angles
@@ -34,11 +41,23 @@ anglesToQuaternion scale angles = axisAngle angles $ scale * norm angles
 fromHomogeneous :: Elt a => Exp (V4 a) -> Exp (V3 a)
 fromHomogeneous ~(V4' x y z _) = V3' x y z
 
+-- | The world's 'forward' direction. This is the direction the camera looks
+-- into when it has not been rotated.
+forwardVector :: V3 Float
+forwardVector = V3 0.0 0.0 (-1.0)
+
+-- | The world's 'up' direction. This is used in combination in cross products
+-- to calculate orthogonal vectors and perspectives.
+upVector :: V3 Float
+upVector = V3 0.0 1.0 0.0
+
 -- | Convert an integer vector to a float vector. This is only used when
 -- converting between rasterization and world spaces.
 vecToFloat ::
      (Functor f, Elt (f Int), Elt (f Float)) => Exp (f Int) -> Exp (f Float)
 vecToFloat = fmap toFloating
+
+-- ** RNG
 
 -- | Use a linear congruential pseudo random number generator to generate a
 -- 'Float' from a seed. The result consists of the generated float and a new

@@ -8,11 +8,7 @@ getStartCamera :: Camera
 getStartCamera =
   Camera
     { _cameraPosition = V3 1.0 (-1.6) (-4.8)
-   -- TODO: Use proper angles here. This should be implemented using quaternions
-   --       and euler angles, but since we don't have any way to rotate the
-   --       camera yet we'll just use looking direciton instead.
-   -- , _cameraDirection = normalize $ V3 0.3 (-0.3) 0.0 -- These are Euler angles
-    , _cameraDirection = normalize $ V3 0.1 (-0.01) (-1.0)
+    , _cameraRotation = V3 0.314 (-0.314) 0.0 -- These are Euler angles
     , _cameraFov = 45
     }
 
