@@ -22,6 +22,11 @@ import Scene.Objects
 import Scene.World (getStartCamera)
 
 -- * Functions
+-- ** Vector operations
+
+-- | Convert an unnormalized euler axis rotation vector into a 'Quaternion'.
+anglesToQuaternion :: Exp Float -> Exp Direction -> Exp (Quaternion Float)
+anglesToQuaternion scale angles = axisAngle angles $ scale * norm angles
 
 -- | Transform homogeneous coordinates back into regular vectors. There is a
 -- function in 'Linear.V4' that has the same signature, but it also normalizes

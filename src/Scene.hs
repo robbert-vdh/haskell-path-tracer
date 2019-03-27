@@ -111,10 +111,7 @@ traceRay limit scene primaryRay =
             then T3 (T2 ray seed) result 0.0
             else let T2 (Ray' intersection iNormal) iMaterial = fromJust nextHit
                      T2 rotationVector nextSeed = genVec seed
-                     -- TODO: This is INCORRECT, but I wanted to know what would
-                     --       happen anyway. It looks correct, but I feel like
-                     --       it shouldn't be.
-                     nextDirection = rotate (axisAngle rotationVector 1) iNormal
+                     nextDirection = rotate (anglesToQuaternion pi rotationVector) iNormal
                      nextRay = Ray' (intersection + nextDirection ^* epsilon) nextDirection
 
                      emittance =
