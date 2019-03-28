@@ -20,6 +20,8 @@ import Data.Array.Accelerate.Linear as A
 import Data.Array.Accelerate.Product
 import Data.Array.Accelerate.Smart
 import Data.Typeable
+
+import Prelude ((<$>))
 import qualified Prelude
 
 -- * Objects
@@ -134,6 +136,17 @@ class HasSpecularity t a | t -> a where
   specularity :: Getter (Exp t) (Exp a)
 instance HasSpecularity Material Float where
   specularity = to $ \t -> Exp $ SuccTupIdx ZeroTupIdx `Prj` t
+
+-- These two lenses are used for camera movement. As they're the only two lenses
+-- we need that have setters and are not lifted to 'Exp's we'll dimply define
+-- them manually.
+
+rotation' :: Lens' Camera Direction
+rotation' f c@Camera {_cameraRotation = rot} =
+  (\x -> c {_cameraRotation = x}) <$> f rot
+position' :: Lens' Camera Position
+position' f c@Camera {_cameraPosition = pos} =
+  (\x -> c {_cameraPosition = x}) <$> f pos
 
 -- * Pattern synonyms
 --
