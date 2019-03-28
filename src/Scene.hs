@@ -26,6 +26,9 @@ import Scene.Objects
 import Scene.World
 import Util
 
+-- TODO: Find out why everything got a LOT slower between commits cc30a2a and
+--       a7f11be
+
 -- | Render a single sample, combining the previous results with the newly
 -- generated sample. This result is an array of color values summed over the
 -- entire runtime of the application (or until the rendering gets reset). The
