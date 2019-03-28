@@ -9,9 +9,11 @@ module Util where
 
 import Control.Monad.Trans.State.Strict (runState, state)
 import Data.Array.Accelerate as A
+import Data.Array.Accelerate.Control.Lens
 import Data.Array.Accelerate.Data.Functor as A hiding ((<$>))
 import Data.Array.Accelerate.Linear as A
 import qualified System.Random.MWC as Rng
+import qualified Linear as L
 
 import qualified Data.List as P
 import Prelude ((<$>), (<*>), return, IO)
@@ -19,7 +21,6 @@ import qualified Prelude as P
 
 import Intersection
 import Scene.Objects
-import Scene.World (getStartCamera)
 
 -- * Functions
 -- ** Vector operations
@@ -34,6 +35,15 @@ anglesToDirection angles =
 -- | Convert an unnormalized euler axis rotation vector into a 'Quaternion'.
 anglesToQuaternion :: Exp Float -> Exp Direction -> Exp (Quaternion Float)
 anglesToQuaternion scale angles = axisAngle angles $ scale * norm angles
+
+-- | Convert an unnormalized euler axis rotation vector into a 'Quaternion'.
+anglesToQuaternion' :: Float -> Direction -> Quaternion Float
+anglesToQuaternion' scale angles = L.axisAngle angles $ scale * L.norm angles
+
+translate :: Direction -> Camera -> Camera
+translate delta camera = camera & position' +~ translation
+  where
+    translation = L.rotate (anglesToQuaternion' 1 $ camera ^. rotation') delta
 
 -- | Transform homogeneous coordinates back into regular vectors. There is a
 -- function in 'Linear.V4' that has the same signature, but it also normalizes
@@ -181,7 +191,3 @@ screenPixels = A.fromFunction screenShape $ \(Z :. y :. x) -> V2 x y
 -- | The size of the output as an array shape.
 screenShape :: Z :. Int :. Int
 screenShape = Z :. P.fromIntegral screenHeight :. P.fromIntegral screenWidth
-
--- TODO: Replace this with some actual value
-theCamera :: A.Exp Camera
-theCamera = A.constant getStartCamera

@@ -9,6 +9,7 @@ import Prelude as P
 
 import Lib (runN)
 import Scene (render)
+import Scene.World (initialCamera)
 import Util
 
 -- | Compute a single pixel using the interpreter. This allows you to use
@@ -17,7 +18,7 @@ computeDebug :: (Int, Int) -> IO ()
 computeDebug (x, y) = do
   seeds <- initialOutput
   let pixels = fromList (Z :. 1 :. 1) [V2 x y]
-      result = toList $ Interpreter.runN (render theCamera) pixels seeds
+      result = toList $ Interpreter.runN (render $ constant initialCamera) pixels seeds
 
   putStrLn $ show (x, y) ++ " -> " ++ show result
 
@@ -26,7 +27,7 @@ computePixels :: [(Int, Int)] -> IO ()
 computePixels points = do
   seeds <- initialOutput
   let pixels = fromList (Z :. 1 :. P.length points) $ P.map (uncurry V2) points
-      result = toList $ runN (render theCamera) pixels seeds
+      result = toList $ runN (render $ constant initialCamera) pixels seeds
 
   putStrLn $
     intercalate "\n" $

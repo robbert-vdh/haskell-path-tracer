@@ -1,62 +1,72 @@
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE ViewPatterns #-}
 
 module Main where
 
-import Control.Concurrent
+import Control.Concurrent hiding (newChan, writeChan)
+import Control.Concurrent.Chan.Unagi.NoBlocking
 import Control.Exception
 import Control.Lens
-import Control.Monad (unless)
+import Control.Monad (forM_, unless, when)
 import qualified Data.Array.Accelerate as A
 import qualified Data.Array.Accelerate.IO.Data.Vector.Storable as A
+import Data.Int (Int32)
 import qualified Data.Text as T
 import qualified Data.Vector.Storable as V
-import Data.Word (Word32)
 import Data.Vector.Storable (unsafeWith)
+import Data.Word (Word32)
 import Foreign.C.Types (CInt(..))
 import qualified Graphics.GLUtil as GLU
 import qualified Graphics.Rendering.OpenGL as GL
 import Linear (V2)
 import SDL
+import SDL.Vect (Point(..))
 
 import Lib
 import Scene
-import Scene.Objects (Color)
+import Scene.Objects (Camera, Color, rotation')
+import Scene.World (initialCamera)
 import TH
 import Util
 
 -- | The resources that the rendering loop relies on. All of these are static
 -- once created, although the inner values of the 'MVar's can change.
-data Resources = Resources
-  { _window :: Window
-  , _program :: GLU.ShaderProgram
-  , _vao :: GL.VertexArrayObject
-  , _state :: State
-  }
-
--- | The state that gets shared between the computation and rendering threads.
+--
 -- The general idea behind this setup is that we can use message passing to
 -- safely send any updates (e.g. camera movement) to the computation thread
 -- without having to manually block the 'MVar'.
-data State = State
-  { _mResult :: MVar Result
-  , _events :: Chan InputEvent
+data Resources = Resources
+  { _resourcesWindow :: Window
+  , _resourcesProgram :: GLU.ShaderProgram
+  , _resourcesVao :: GL.VertexArrayObject
+  , _resourcesMResult :: MVar Result
+  , _resourcesEvents :: InChan InputEvent
   }
 
-data InputEvent = InputEvent
+-- | Any camera movement should be encoded as one of these events and passed to
+-- the 'Chan InputEvent' messaging queue contained in the shared 'State'.
+data InputEvent
+  = Move (V3 Float)
+  | Rotate (V3 Float)
+  deriving Show
 
 -- | The rendering results. The resulting 'Color' matrix should be divided by
 -- the number of iterations in order to obtain the final averaged image.
 data Result = Result
-  { _texture :: A.Matrix (Color, Word32)
-  , _iterations :: Int
+  { _resultTexture :: A.Matrix (Color, Word32)
+  , _resultIterations :: Int
+  , _resultCamera :: Camera
   }
 
-makeLenses ''Resources
-makeLenses ''State
-makeLenses ''Result
+makeFields ''Resources
+makeFields ''Result
 
 main :: IO ()
 main = do
@@ -65,6 +75,7 @@ main = do
   window' <-
     createWindow (T.pack "Leipe Mocro Tracer") $
     defaultWindow
+      -- We'll only grab the mouse input when the right button is pressed
       { windowInputGrabbed = False
       , windowInitialSize = V2 (CInt screenWidth) (CInt screenHeight)
       , windowOpenGL = Just defaultOpenGL {glProfile = Core Normal 3 3}
@@ -72,75 +83,126 @@ main = do
   _glContext <- glCreateContext window'
   (program', vao') <- initResources
 
+  let compute = compileFor initialCamera
   seeds <- initialOutput
-  result <- newMVar $! Result { _texture = compute seeds, _iterations = 1 }
-  eventQueue <- newChan
-  let state' = State result eventQueue
+  mResult' <-
+    newMVar $!
+    Result
+      { _resultTexture = compute seeds
+      , _resultIterations = 1
+      , _resultCamera = initialCamera
+      }
+  (inQueue, outQueue) <- newChan
+  [eventStream] <- streamChan 1 outQueue
 
-  computationThreadId <- forkOS $ computationLoop state'
-  graphicsLoop $ Resources window' program' vao' state'
+  computationThreadId <- forkOS $ computationLoop compute eventStream mResult'
+  graphicsLoop $ Resources window' program' vao' mResult' inQueue
 
   killThread computationThreadId
 
--- | Render a single sample based on the a matrix of @(<screen pixel>, <rng
--- seed>)@ pairs and the previously computed output.
+-- | Create a function for rendering a single sample based on the current camera
+-- position. This function is meant to be reused until the 'Camera' position
+-- gets updated.
 --
--- TODO: The camera is hardcoded for now, but this obviously should not be the
---       case!
-compute ::
-     A.Array A.DIM2 (Color, Word32)
-  -> A.Array A.DIM2 (Color, Word32)
-compute = runN (render theCamera) screenPixels
+-- TODO: Find out if there is a difference in performance between 'Exp a' and
+--       'the' applied to 'Acc (Scalar a)'
+compileFor :: Camera -> (A.Matrix (Color, Word32) -> A.Matrix (Color, Word32))
+compileFor c = run1 $ render (A.constant c) (A.use screenPixels)
 
 -- | Perform the actual path tracing. This is done in a seperate thread that
 -- shares and 'MVar' with the rendering thread to prevent one of the processes
 -- from blocking another.
-computationLoop :: State -> IO ()
-computationLoop (State mResult' eventQueue) = readMVar mResult' >>= go
+computationLoop ::
+     (A.Matrix (Color, Word32) -> A.Matrix (Color, Word32))
+  -> Stream InputEvent
+  -> MVar Result
+  -> IO ()
+computationLoop f eventQueue mResult' = readMVar mResult' >>= go f eventQueue
   where
-    go result = do
+    -- | Retrieve a list of unprocessed input events form the event queue.
+    --
+    -- TODO: Rewrite this using 'Control.Monad.Trans.State', and maybe
+    --       'Data.Seq' instead of lists
+    poll q =
+      tryReadNext q >>= \case
+        Next x q' -> do
+          (xs, q'') <- poll q'
+          return (xs ++ [x], q'')
+        Pending -> return ([], q)
+
+    go compute queue result = do
       -- HACK: This evaluate is needed because we don't actually read fromt he
       --       MVar here
-      texture' <- evaluate $! compute $ result ^. texture
+      texture' <- evaluate $! compute (result ^. texture)
       let result' = result & texture .~ texture' & iterations +~ 1
       _ <- swapMVar mResult' $! result'
       print $ result ^. iterations
 
-      -- Reset image with space press
-      keysState <- getKeyboardState
-      let spaceDown = keysState ScancodeSpace
+      (inputEvents, queue') <- poll queue
+      if null inputEvents
+        then go compute queue' result'
+        else do
+          let updatedCamera =
+                foldl
+                  (\c ->
+                     \case
+                       Move delta -> translate delta c
+                       Rotate delta -> c & rotation' +~ delta)
+                  (result ^. camera)
+                  inputEvents
+              compute' = compileFor updatedCamera
 
-      if spaceDown
-        then do
+          -- The rendering should be reset after moving the camera
           emptyOutput <- initialOutput
-          go $ result' & iterations .~ 1 & texture .~ emptyOutput
-        else go result'
-
--- getWASD :: (Scancode -> Bool) -> m String
--- getWASD ks = do
---   wasd <- map ks [ScancodeW, ScancodeA, ScancodeS, ScancodeD]
---   return [l | (l, c) <- (zip "WASD" wasd), c]
+          go compute' queue' $
+            result' & iterations .~ 1 & texture .~ emptyOutput & camera .~ updatedCamera
 
 -- | Perform all the necesary I/O to handle user input and to render the texture
 -- created by Accelerate using OpenGL.
 graphicsLoop :: Resources -> IO ()
 graphicsLoop resources = do
-  sdlEvents <- pollEvents
-
-  isPressed <- getKeyboardState
-  let shouldQuit =
-        any (\(eventPayload -> p) -> p == QuitEvent) sdlEvents ||
-        isPressed ScancodeQ || isPressed ScancodeEscape
-
-  -- XXX: This is a LOT faster than using 'A.toList' but I feel dirty even
-  --      looking at it. Is there really not a better way?
-  result <- readMVar $ resources ^. state . mResult
-  let (((), ((((), r), g), b)), _) = A.toVectors $ result ^. texture
-      pixelBuffer = V.zipWith3 V3 r g b
-
+  sdlEvents <- map eventPayload <$> pollEvents
   V2 width height <- get $ windowSize $ resources ^. window
   GL.viewport $=
     (GL.Position 0 0, GL.Size (fromIntegral width) (fromIntegral height))
+
+  -- TODO: Maybe use 'mapEvents' to fold all events into a single structure
+  --       instead of having to loop over it multiple times
+  keyDown <- getKeyboardState
+  mouseDown <- getMouseButtons
+  let allowMouseMovement = mouseDown ButtonRight
+      shouldQuit =
+        QuitEvent `elem` sdlEvents ||
+        keyDown ScancodeQ || keyDown ScancodeEscape
+
+  -- Camera movement
+  windowGrab (resources ^. window) $= allowMouseMovement
+  cursorVisible $= not allowMouseMovement
+  when allowMouseMovement $
+    forM_ sdlEvents
+      (\case
+         MouseMotionEvent MouseMotionEventData { mouseMotionEventRelMotion =
+                                                 V2 (adjustSensitivity -> dx)
+                                                    (adjustSensitivity -> dy) , .. } -> do
+           writeChan (resources ^. events) (Rotate $ V3 dx dy 0.0)
+           warpMouse WarpCurrentFocus $ P $ V2 (width `quot` 2) (height `quot` 2)
+         _ -> return ())
+
+  -- TODO: Make the distance relative to the elapsed time
+  when (keyDown ScancodeW) $
+    writeChan (resources ^. events) (Move $ V3 0 0 (-0.1))
+  when (keyDown ScancodeS) $
+    writeChan (resources ^. events) (Move $ V3 0 0 0.1)
+  when (keyDown ScancodeA) $
+    writeChan (resources ^. events) (Move $ V3 (-0.1) 0 0)
+  when (keyDown ScancodeD) $
+    writeChan (resources ^. events) (Move $ V3 0.1 0 0)
+
+  -- XXX: This is a LOT faster than using 'A.toList' but I feel dirty even
+  --      looking at it. Is there really not a better way?
+  result <- readMVar $ resources ^. mResult
+  let (((), ((((), r), g), b)), _) = A.toVectors $ result ^. texture
+      pixelBuffer = V.zipWith3 V3 r g b
 
   GL.clearColor $= GL.Color4 0.5 0.5 0.5 1.0
   GL.clear [GL.ColorBuffer]
@@ -212,3 +274,8 @@ screenQuad =
      , V2 (-1.0) 1.0
      , V2 1.0 1.0
      ] :: [V2 Float])
+
+-- | Convert mouse movement from actual screen pixels into a floating point
+-- representation that can be used for camera rotation.
+adjustSensitivity :: Int32 -> Float
+adjustSensitivity n = fromIntegral n * 0.001

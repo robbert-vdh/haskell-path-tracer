@@ -4,8 +4,8 @@ import Scene.Objects
 
 import Linear
 
-getStartCamera :: Camera
-getStartCamera =
+initialCamera :: Camera
+initialCamera =
   Camera
     { _cameraPosition = V3 1.0 (-1.6) (-4.8)
     , _cameraRotation = V3 0.314 (-0.314) 0.0 -- These are Euler angles

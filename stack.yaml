@@ -38,6 +38,7 @@ packages:
 # using the same syntax as the packages field.
 # (e.g., acme-missiles-0.3)
 extra-deps:
+  - unagi-chan-0.4.1.0
   # GLUtil simply reduces some boilerplate from writing raw OpenGL
   - hpp-0.6.1
   - GLUtil-0.10.3
