@@ -1,6 +1,7 @@
 {-# LANGUAGE CPP #-}
 module Lib
   ( run
+  , run1
   , runN
   ) where
 
@@ -19,6 +20,14 @@ run :: A.Arrays a => A.Acc a -> a
 run = CPU.run
 #else
 run = GPU.run
+#endif
+
+#ifdef USE_CPU_BACKEND
+run1 :: (A.Arrays a, A.Arrays b) => (A.Acc a -> A.Acc b) -> a -> b
+run1 = CPU.run1
+#else
+run1 :: (A.Arrays a, A.Arrays b) => (A.Acc a -> A.Acc b) -> a -> b
+run1 = GPU.run1
 #endif
 
 #ifdef USE_CPU_BACKEND
