@@ -190,13 +190,17 @@ graphicsLoop resources = do
 
   -- TODO: Make the distance relative to the elapsed time
   when (keyDown ScancodeW) $
-    writeChan (resources ^. events) (Move $ V3 0 0 (-0.1))
+    writeChan (resources ^. events) (Move $ V3 0.0 0.0 (-0.05))
   when (keyDown ScancodeS) $
-    writeChan (resources ^. events) (Move $ V3 0 0 0.1)
+    writeChan (resources ^. events) (Move $ V3 0.0 0.0 0.05)
   when (keyDown ScancodeA) $
-    writeChan (resources ^. events) (Move $ V3 (-0.1) 0 0)
+    writeChan (resources ^. events) (Move $ V3 (-0.05) 0.0 0.0)
   when (keyDown ScancodeD) $
-    writeChan (resources ^. events) (Move $ V3 0.1 0 0)
+    writeChan (resources ^. events) (Move $ V3 0.05 0.0 0.0)
+  when (keyDown ScancodeLCtrl) $
+    writeChan (resources ^. events) (Move $ V3 0.0 (-0.05) 0.0)
+  when (keyDown ScancodeSpace) $
+    writeChan (resources ^. events) (Move $ V3 0.0 0.05 0.0)
 
   -- XXX: This is a LOT faster than using 'A.toList' but I feel dirty even
   --      looking at it. Is there really not a better way?
