@@ -33,15 +33,29 @@ data Resources = Resources
   { _window :: Window
   , _program :: GLU.ShaderProgram
   , _vao :: GL.VertexArrayObject
-  , _mResult :: MVar Result
+  , _state :: State
   }
 
+-- | The state that gets shared between the computation and rendering threads.
+-- The general idea behind this setup is that we can use message passing to
+-- safely send any updates (e.g. camera movement) to the computation thread
+-- without having to manually block the 'MVar'.
+data State = State
+  { _mResult :: MVar Result
+  , _events :: Chan InputEvent
+  }
+
+data InputEvent = InputEvent
+
+-- | The rendering results. The resulting 'Color' matrix should be divided by
+-- the number of iterations in order to obtain the final averaged image.
 data Result = Result
   { _texture :: A.Matrix (Color, Word32)
   , _iterations :: Int
   }
 
 makeLenses ''Resources
+makeLenses ''State
 makeLenses ''Result
 
 main :: IO ()
@@ -60,9 +74,12 @@ main = do
 
   seeds <- initialOutput
   result <- newMVar $! Result { _texture = compute seeds, _iterations = 1 }
-  computationThreadId <- forkOS $ computationLoop result
+  eventQueue <- newChan
+  let state' = State result eventQueue
 
-  graphicsLoop $ Resources window' program' vao' result
+  computationThreadId <- forkOS $ computationLoop state'
+  graphicsLoop $ Resources window' program' vao' state'
+
   killThread computationThreadId
 
 -- | Render a single sample based on the a matrix of @(<screen pixel>, <rng
@@ -78,8 +95,8 @@ compute = runN (render theCamera) screenPixels
 -- | Perform the actual path tracing. This is done in a seperate thread that
 -- shares and 'MVar' with the rendering thread to prevent one of the processes
 -- from blocking another.
-computationLoop :: MVar Result -> IO ()
-computationLoop mResult' = readMVar mResult' >>= go
+computationLoop :: State -> IO ()
+computationLoop (State mResult' eventQueue) = readMVar mResult' >>= go
   where
     go result = do
       -- HACK: This evaluate is needed because we don't actually read fromt he
@@ -108,16 +125,16 @@ computationLoop mResult' = readMVar mResult' >>= go
 -- created by Accelerate using OpenGL.
 graphicsLoop :: Resources -> IO ()
 graphicsLoop resources = do
-  events <- pollEvents
+  sdlEvents <- pollEvents
 
   isPressed <- getKeyboardState
   let shouldQuit =
-        any (\(eventPayload -> p) -> p == QuitEvent) events ||
+        any (\(eventPayload -> p) -> p == QuitEvent) sdlEvents ||
         isPressed ScancodeQ || isPressed ScancodeEscape
 
   -- XXX: This is a LOT faster than using 'A.toList' but I feel dirty even
   --      looking at it. Is there really not a better way?
-  result <- readMVar $ resources ^. mResult
+  result <- readMVar $ resources ^. state . mResult
   let (((), ((((), r), g), b)), _) = A.toVectors $ result ^. texture
       pixelBuffer = V.zipWith3 V3 r g b
 
