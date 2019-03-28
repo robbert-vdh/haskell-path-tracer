@@ -1,6 +1,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE ViewPatterns #-}
 
 module Main where
 
@@ -101,20 +102,10 @@ graphicsLoop :: Window -> GLU.ShaderProgram -> GL.VertexArrayObject -> MVar Resu
 graphicsLoop window program vao mResult = do
   events <- pollEvents
 
-  -- TODO: When we add camera movement we should simply keep track of a 'Set' of
-  --       pressed keys.
+  isPressed <- getKeyboardState
   let shouldQuit =
-        any
-          (\Event {eventPayload} ->
-             case eventPayload of
-               KeyboardEvent KeyboardEventData { keyboardEventKeyMotion
-                                               , keyboardEventKeysym = key
-                                               } ->
-                 keyboardEventKeyMotion == Pressed &&
-                 keysymKeycode key `elem` [KeycodeEscape, KeycodeQ]
-               QuitEvent -> True
-               _ -> False)
-          events
+        any (\(eventPayload -> p) -> p == QuitEvent) events ||
+        isPressed ScancodeQ || isPressed ScancodeEscape
 
   -- XXX: This is a LOT faster than using 'A.toList' but I feel dirty even
   --      looking at it. Is there really not a better way?
