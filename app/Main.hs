@@ -27,33 +27,42 @@ import Scene.Objects (Color)
 import TH
 import Util
 
+-- | The resources that the rendering loop relies on. All of these are static
+-- once created, although the inner values of the 'MVar's can change.
+data Resources = Resources
+  { _window :: Window
+  , _program :: GLU.ShaderProgram
+  , _vao :: GL.VertexArrayObject
+  , _mResult :: MVar Result
+  }
+
 data Result = Result
   { _texture :: A.Matrix (Color, Word32)
   , _iterations :: Int
   }
 
+makeLenses ''Resources
 makeLenses ''Result
 
 main :: IO ()
 main = do
   initializeAll
 
-  window <-
+  window' <-
     createWindow (T.pack "Leipe Mocro Tracer") $
     defaultWindow
-      { windowInputGrabbed = True -- Change this to True when implementing user input
+      { windowInputGrabbed = False
       , windowInitialSize = V2 (CInt screenWidth) (CInt screenHeight)
       , windowOpenGL = Just defaultOpenGL {glProfile = Core Normal 3 3}
       }
-  _glContext <- glCreateContext window
-  (program, vao) <- initResources
+  _glContext <- glCreateContext window'
+  (program', vao') <- initResources
 
   seeds <- initialOutput
   result <- newMVar $! Result { _texture = compute seeds, _iterations = 1 }
   computationThreadId <- forkOS $ computationLoop result
-  -- TODO: Pack all the things we reuse (Accelerate arrays, windows, programs,
-  --       buffers etc.) in a struct
-  graphicsLoop window program vao result
+
+  graphicsLoop $ Resources window' program' vao' result
   killThread computationThreadId
 
 -- | Render a single sample based on the a matrix of @(<screen pixel>, <rng
@@ -70,14 +79,14 @@ compute = runN (render theCamera) screenPixels
 -- shares and 'MVar' with the rendering thread to prevent one of the processes
 -- from blocking another.
 computationLoop :: MVar Result -> IO ()
-computationLoop mResult = readMVar mResult >>= go
+computationLoop mResult' = readMVar mResult' >>= go
   where
     go result = do
       -- HACK: This evaluate is needed because we don't actually read fromt he
       --       MVar here
       texture' <- evaluate $! compute $ result ^. texture
       let result' = result & texture .~ texture' & iterations +~ 1
-      _ <- swapMVar mResult $! result'
+      _ <- swapMVar mResult' $! result'
       print $ result ^. iterations
 
       -- Reset image with space press
@@ -96,10 +105,9 @@ computationLoop mResult = readMVar mResult >>= go
 --   return [l | (l, c) <- (zip "WASD" wasd), c]
 
 -- | Perform all the necesary I/O to handle user input and to render the texture
--- created by Accelerate using OpenGL. The state is read by copying from an
--- 'MVar'.
-graphicsLoop :: Window -> GLU.ShaderProgram -> GL.VertexArrayObject -> MVar Result -> IO ()
-graphicsLoop window program vao mResult = do
+-- created by Accelerate using OpenGL.
+graphicsLoop :: Resources -> IO ()
+graphicsLoop resources = do
   events <- pollEvents
 
   isPressed <- getKeyboardState
@@ -109,11 +117,11 @@ graphicsLoop window program vao mResult = do
 
   -- XXX: This is a LOT faster than using 'A.toList' but I feel dirty even
   --      looking at it. Is there really not a better way?
-  result <- readMVar mResult
+  result <- readMVar $ resources ^. mResult
   let (((), ((((), r), g), b)), _) = A.toVectors $ result ^. texture
       pixelBuffer = V.zipWith3 V3 r g b
 
-  V2 width height <- get $ windowSize window
+  V2 width height <- get $ windowSize $ resources ^. window
   GL.viewport $=
     (GL.Position 0 0, GL.Size (fromIntegral width) (fromIntegral height))
 
@@ -136,14 +144,16 @@ graphicsLoop window program vao mResult = do
       0
       (GL.PixelData GL.RGB GL.Float p)
 
-  GLU.setUniform program "u_iterations" (fromIntegral (result ^. iterations) :: GL.GLint)
-  GLU.setUniform program "u_texture" (0 :: GL.GLint)
+  GLU.setUniform (resources ^. program) "u_iterations"
+    (fromIntegral (result ^. iterations) :: GL.GLint)
+  GLU.setUniform (resources ^. program) "u_texture"
+    (0 :: GL.GLint)
 
-  GL.bindVertexArrayObject $= Just vao
+  GL.bindVertexArrayObject $= (Just $ resources ^. vao)
   GL.drawArrays GL.Triangles 0 6
 
-  glSwapWindow window
-  unless shouldQuit $ graphicsLoop window program vao mResult
+  glSwapWindow $ resources ^. window
+  unless shouldQuit $ graphicsLoop resources
 
 -- | Iniitalize the OpenGL shaders and all static buffers.
 initResources :: IO (GLU.ShaderProgram, GL.VertexArrayObject)
@@ -151,19 +161,19 @@ initResources = do
   GL.blend $= GL.Enabled
   GL.blendFunc $= (GL.SrcAlpha, GL.OneMinusSrcAlpha)
 
-  program <- GLU.simpleShaderProgramBS
+  program' <- GLU.simpleShaderProgramBS
     $(readShaderQ "app/shaders/vs.glsl")
     $(readShaderQ "app/shaders/fs.glsl")
 
-  let vertexAttrib = GLU.getAttrib program "v_pos"
-  vao <- GLU.makeVAO $ do
+  let vertexAttrib = GLU.getAttrib program' "v_pos"
+  vao' <- GLU.makeVAO $ do
     vertexBuffer <- screenQuad
     GL.bindBuffer GL.ArrayBuffer $= Just vertexBuffer
     GL.vertexAttribPointer vertexAttrib $=
       (GL.ToFloat, GL.VertexArrayDescriptor 2 GL.Float 0 GLU.offset0)
     GL.vertexAttribArray vertexAttrib $= GL.Enabled
 
-  GL.currentProgram $= (Just $ GLU.program program)
+  GL.currentProgram $= (Just $ GLU.program program')
 
   -- We have to make sure the maximum number of mipmaps is set to zero,
   -- otherwise the texture will be incomplete and not render at all
@@ -171,7 +181,7 @@ initResources = do
   GL.textureBinding GL.Texture2D $= Just (GL.TextureObject 0)
   GL.textureLevelRange GL.Texture2D $= (0, 0)
 
-  return (program, vao)
+  return (program', vao')
 
 -- | Create a screen quad that the fragment shader can be drawn on.
 screenQuad :: IO GL.BufferObject
