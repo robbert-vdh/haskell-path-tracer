@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE ViewPatterns #-}
 
@@ -7,8 +8,10 @@
 
 module Util where
 
+import Control.Monad (replicateM)
 import Control.Monad.Trans.State.Strict (runState, state)
 import Data.Array.Accelerate as A
+import qualified Data.Array.Accelerate.Array.Sugar as S
 import Data.Array.Accelerate.Control.Lens
 import Data.Array.Accelerate.Data.Functor as A hiding ((<$>))
 import Data.Array.Accelerate.Linear as A
@@ -105,6 +108,24 @@ genVec seed = P.uncurry T2 $ runState (V3' <$> rng <*> rng <*> rng) seed
   where
     rng = state genFloat'
 
+-- | Create a RNG seed for every screen pixel. This function is used when
+-- resetting the rendering texture and when reseeding the RNGs.
+genSeeds :: IO [Word32]
+genSeeds = do
+  rng <- Rng.createSystemRandom
+  replicateM (S.size screenShape) (Rng.uniform rng)
+
+-- | Reseed a rendering texture by replacing the seeds stored in every pixel
+-- tuple with a newly generated value. This is important because 'genFloat'
+-- relies on a very simple PRNG. While this is good enough for our use cases,
+-- you can still start to see the RNGs converge if you leave the algorithm
+-- running for long enough.
+reseed :: Matrix (Color, Word32) -> IO (Matrix (Color, Word32))
+reseed m =
+  fromList screenShape . P.zipWith (\(c, _) s -> (c, s)) old <$> genSeeds
+  where
+    old = toList m
+
 -- ** Mapping and folding over a scene
 --
 -- Accelerate does not support sum types (yet), but we still want a nice and
@@ -180,19 +201,13 @@ screenSize =
 
 -- | The output matrix initialized with all zero values and intiial seeds. This
 -- is used during the initialization and after moving the camera.
---
--- TODO: Reseed the RNG after a certain number of iterations
-initialOutput :: IO (A.Matrix (Color, Word32))
-initialOutput = do
-  rng <- Rng.createSystemRandom
-  fromFunctionM screenShape $ \_ -> do
-    seed <- Rng.uniform rng
-    return (V3 0.0 0.0 0.0, seed)
+initialOutput :: IO (Matrix (Color, Word32))
+initialOutput = fromList screenShape . P.map (V3 0.0 0.0 0.0, ) <$> genSeeds
 
 -- | A matrix containing coordinates for every pixel on the screen. This is used
 -- to cast the actual rays.
-screenPixels :: (A.Matrix (V2 Int))
-screenPixels = A.fromFunction screenShape $ \(Z :. y :. x) -> V2 x y
+screenPixels :: (Matrix (V2 Int))
+screenPixels = fromFunction screenShape $ \(Z :. y :. x) -> V2 x y
 
 -- | The size of the output as an array shape.
 screenShape :: Z :. Int :. Int

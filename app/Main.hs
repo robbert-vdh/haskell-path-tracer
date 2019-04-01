@@ -139,16 +139,21 @@ computationLoop f eventQueue mResult' = readMVar mResult' >>= go f eventQueue
       _ <- swapMVar mResult' $! result'
       print $ result ^. iterations
 
+      -- Handle any input events if there are any, alternatively reseed the RNGs
+      -- every 4000 iterations to prevent convergence
       (inputEvents, queue') <- poll queue
       if null inputEvents
-        then go compute queue' result'
+        then if (result ^. iterations) `rem` 4000 == 0
+               then do
+                 reseeded <- reseed texture'
+                 go compute queue' $ result' & texture .~ reseeded
+               else go compute queue' result'
         else do
           let updatedCamera =
                 foldl
-                  (\c ->
-                     \case
-                       Move delta -> translate delta c
-                       Rotate delta -> c & rotation' +~ delta)
+                  (\c -> \case
+                      Move delta -> translate delta c
+                      Rotate delta -> c & rotation' +~ delta)
                   (result ^. camera)
                   inputEvents
               compute' = compileFor $ scalar updatedCamera
@@ -156,7 +161,8 @@ computationLoop f eventQueue mResult' = readMVar mResult' >>= go f eventQueue
           -- The rendering should be reset after moving the camera
           emptyOutput <- initialOutput
           go compute' queue' $
-            result' & iterations .~ 1 & texture .~ emptyOutput & camera .~ updatedCamera
+            result' & iterations .~ 1 & texture .~ emptyOutput &
+            camera .~ updatedCamera
 
 -- | Perform all the necesary I/O to handle user input and to render the texture
 -- created by Accelerate using OpenGL.
