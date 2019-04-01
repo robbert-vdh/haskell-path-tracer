@@ -140,10 +140,10 @@ computationLoop f eventQueue mResult' = readMVar mResult' >>= go f eventQueue
       print $ result ^. iterations
 
       -- Handle any input events if there are any, alternatively reseed the RNGs
-      -- every 4000 iterations to prevent convergence
+      -- every 2000 iterations to prevent convergence
       (inputEvents, queue') <- poll queue
       if null inputEvents
-        then if (result ^. iterations) `rem` 4000 == 0
+        then if (result ^. iterations) `rem` 2000 == 0
                then do
                  reseeded <- reseed texture'
                  go compute queue' $ result' & texture .~ reseeded
