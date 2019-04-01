@@ -184,7 +184,7 @@ screenSize =
 -- TODO: Reseed the RNG after a certain number of iterations
 initialOutput :: IO (A.Matrix (Color, Word32))
 initialOutput = do
-  rng <- Rng.create
+  rng <- Rng.createSystemRandom
   fromFunctionM screenShape $ \_ -> do
     seed <- Rng.uniform rng
     return (V3 0.0 0.0 0.0, seed)
