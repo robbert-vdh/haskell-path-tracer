@@ -18,7 +18,7 @@ computeDebug :: (Int, Int) -> IO ()
 computeDebug (x, y) = do
   seeds <- initialOutput
   let pixels = fromList (Z :. 1 :. 1) [V2 x y]
-      result = toList $ Interpreter.runN (render $ constant initialCamera) pixels seeds
+      result = toList $ Interpreter.runN render pixels (scalar initialCamera) seeds
 
   putStrLn $ show (x, y) ++ " -> " ++ show result
 
@@ -27,7 +27,7 @@ computePixels :: [(Int, Int)] -> IO ()
 computePixels points = do
   seeds <- initialOutput
   let pixels = fromList (Z :. 1 :. P.length points) $ P.map (uncurry V2) points
-      result = toList $ runN (render $ constant initialCamera) pixels seeds
+      result = toList $ runN render pixels (scalar initialCamera) seeds
 
   putStrLn $
     intercalate "\n" $

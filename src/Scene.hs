@@ -39,14 +39,14 @@ import Util
 -- calculation can the passed on to the next function call. This way we can also
 -- reuse our RNG seeds for multiple samples.
 render ::
-     Exp Camera
-  -> Acc (Matrix (V2 Int)) -- ^ Screen pixel coordinates
+     Acc (Matrix (V2 Int)) -- ^ Screen pixel coordinates
+  -> Acc (Scalar Camera)
   -> Acc (Matrix (Color, Word32)) -- ^ Accumulated results and RNG seeds
   -> Acc (Matrix (Color, Word32)) -- ^ New results and new RNG seeds
-render camera screen acc =
+render screen camera acc =
   zipWith (\(T2 new seed) (T2 old _) -> T2 (new + old) seed) result acc
   where
-    rays = primaryRays camera screen
+    rays = primaryRays (the camera) screen
     seeds = map snd acc
     result = map (traceRay 20 getObjects) $ zip rays seeds
 

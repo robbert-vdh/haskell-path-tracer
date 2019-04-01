@@ -71,7 +71,9 @@ extra-deps:
     commit: b74eb8098735b1ad6cff3c5655af03d3f29b9f8e
 
 # Override default flag values for local packages and extra-deps
-# flags: {}
+flags:
+  accelerate:
+    debug: true
 
 # Extra package databases containing global packages
 # extra-package-dbs: []

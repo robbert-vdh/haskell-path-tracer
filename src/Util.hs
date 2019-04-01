@@ -23,6 +23,13 @@ import Intersection
 import Scene.Objects
 
 -- * Functions
+-- ** Accelerate
+
+-- | Wrap a value in a accelerate array. This is equivalent to 'unit', but not
+-- lifted to 'Exp' and 'Acc'.
+scalar :: Elt a => a -> Scalar a
+scalar x = fromList Z [x]
+
 -- ** Vector operations
 
 -- | Convert the euler angles stored in the 'Camera' to a looking direction
@@ -150,7 +157,6 @@ expMinWith f (x:xs) =
     xs
   where
     calcKey a = T2 a (f a)
-
 
 -- * Definitions
 

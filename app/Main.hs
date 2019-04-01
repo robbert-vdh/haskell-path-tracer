@@ -15,6 +15,7 @@ import Control.Concurrent.Chan.Unagi.NoBlocking
 import Control.Exception
 import Control.Lens
 import Control.Monad (forM_, unless, when)
+import Data.Array.Accelerate (Z(..))
 import qualified Data.Array.Accelerate as A
 import qualified Data.Array.Accelerate.IO.Data.Vector.Storable as A
 import Data.Int (Int32)
@@ -83,7 +84,7 @@ main = do
   _glContext <- glCreateContext window'
   (program', vao') <- initResources
 
-  let compute = compileFor initialCamera
+  let compute = compileFor $ scalar initialCamera
   seeds <- initialOutput
   mResult' <-
     newMVar $!
@@ -106,8 +107,8 @@ main = do
 --
 -- TODO: Find out if there is a difference in performance between 'Exp a' and
 --       'the' applied to 'Acc (Scalar a)'
-compileFor :: Camera -> (A.Matrix (Color, Word32) -> A.Matrix (Color, Word32))
-compileFor c = run1 $ render (A.constant c) (A.use screenPixels)
+compileFor :: A.Scalar Camera -> A.Matrix (Color, Word32) -> A.Matrix (Color, Word32)
+compileFor = runN render screenPixels
 
 -- | Perform the actual path tracing. This is done in a seperate thread that
 -- shares and 'MVar' with the rendering thread to prevent one of the processes
@@ -150,7 +151,7 @@ computationLoop f eventQueue mResult' = readMVar mResult' >>= go f eventQueue
                        Rotate delta -> c & rotation' +~ delta)
                   (result ^. camera)
                   inputEvents
-              compute' = compileFor updatedCamera
+              compute' = compileFor $ scalar updatedCamera
 
           -- The rendering should be reset after moving the camera
           emptyOutput <- initialOutput
