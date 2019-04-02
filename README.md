@@ -1,5 +1,20 @@
 # Haskell Path Tracer
 
+## LLVM versions
+
+LLVM version 8.0 recently got released, but it's not yet available in every
+distro. That's why there are two `stack.yaml` files, one supporting LLVM 7.0.1
+and one for LLVM 8.0. Simply _symlink_ the proper one for your system to
+`stack.yaml` to get started:
+
+```shell
+# LLVM 7.0.1
+ln -s stack-llvm-7.0.1.yaml stack.yaml
+
+# LLVM 8.0
+ln -s stack-llvm-8.0.yaml stack.yaml
+```
+
 ## Running without a GPU
 
 The application uses Accelerate's PTX LLVM backend by default. To run the
