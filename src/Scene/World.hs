@@ -33,7 +33,7 @@ getObjects =
             Material
               { _materialColor = V3 0.0 0.4 0.0
               , _materialSpecularity = 0.9
-              , _materialIlluminance = 14.20
+              , _materialIlluminance = 0.0
               }
         }
     , Sphere
@@ -41,19 +41,19 @@ getObjects =
         , _sphereRadius = 0.3
         , _sphereMaterial =
             Material
-              { _materialColor = V3 0.0 0.0 0.9
-              , _materialSpecularity = 0.0
-              , _materialIlluminance = 2.0
+              { _materialColor = V3 0.0 0.0 1.0
+              , _materialSpecularity = 0.5
+              , _materialIlluminance = 0.0
               }
         }
     , Sphere
-        { _spherePosition = V3 12.0 (-2.4) (-20.0)
-        , _sphereRadius = 0.5
+        { _spherePosition = V3 16.0 (-2.05) (-20.0)
+        , _sphereRadius = 0.9
         , _sphereMaterial =
             Material
               { _materialColor = V3 0.8 0.8 0.8
-              , _materialSpecularity = 0.0
-              , _materialIlluminance = 100.0
+              , _materialSpecularity = 0.5
+              , _materialIlluminance = 150.0
               }
         }
     ]
@@ -68,13 +68,13 @@ getObjects =
               }
         }
     , Plane
-        { _planeDirection = V3 0.0 (-1.0) 0.0
-        , _planePosition = V3 0.0 10.0 0.0
+        { _planeDirection = V3 0.0 0.0 (-1.0)
+        , _planePosition = V3 0.0 10.0 6.0
         , _planeMaterial =
             Material
-              { _materialColor = V3 0.0 0.0 0.0
+              { _materialColor = V3 1.0 1.0 1.0
               , _materialSpecularity = 0.1
-              , _materialIlluminance = 10.0
+              , _materialIlluminance = 0.6
               }
         }
     ]
