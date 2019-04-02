@@ -34,7 +34,6 @@ dependencies:
   - template-haskell
   - transformers
   - text
-  - unagi-chan
   - vector
 
   # OpenGL related packages
