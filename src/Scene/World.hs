@@ -74,7 +74,7 @@ getObjects =
             Material
               { _materialColor = V3 1.0 1.0 1.0
               , _materialSpecularity = 0.1
-              , _materialIlluminance = 0.6
+              , _materialIlluminance = 0.8
               }
         }
     ]
