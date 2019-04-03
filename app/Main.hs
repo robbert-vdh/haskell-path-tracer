@@ -54,13 +54,18 @@ import Scene.World (initialCamera)
 import TH
 import Util
 
+-- | A compiled rendering function for a specific camera position and
+-- orientation. We store this function next to the other rendering data for
+-- simplicity's sake. See 'compileFor' for more information.
+type CompiledFunction = A.Matrix (Color, Word32) -> A.Matrix (Color, Word32)
+
 -- | The rendering results. The resulting 'Color' matrix should be divided by
 -- the number of iterations in order to obtain the final averaged image.
 --
 -- Because the computation function is also dependant in the camera, we simply
 -- store it next to the other values.
 data Result = Result
-  { _resultCompute :: A.Matrix (Color, Word32) -> A.Matrix (Color, Word32)
+  { _resultCompute :: CompiledFunction
   , _resultTexture :: A.Matrix (Color, Word32)
   , _resultIterations :: Int
   , _resultCamera :: Camera
@@ -102,9 +107,7 @@ main = do
 -- | Create a function for rendering a single sample based on the current camera
 -- position. This function is meant to be reused until the 'Camera' position
 -- gets updated.
---
--- TODO: Create a type synonym for this function
-compileFor :: A.Scalar Camera -> A.Matrix (Color, Word32) -> A.Matrix (Color, Word32)
+compileFor :: A.Scalar Camera -> CompiledFunction
 compileFor = runN render screenPixels
 
 -- | Perform the actual path tracing. This is done in a seperate thread that
