@@ -20,7 +20,7 @@ class Primitive p where
   distanceTo :: Exp RayF -> Exp p -> Exp (Maybe Float)
   -- | Calculate the normal of a primitive at the specified position in world
   -- space. The normal should be pointing outwards.
-  normal :: Exp Position -> Exp p -> Exp Direction
+  normal :: Exp Point -> Exp p -> Exp Direction
   -- | Get intersection point, normal and material for a sphere hit. Assumes
   -- there is a hit.
   hit :: Exp RayF -> Exp Float -> Exp p -> Exp (Normal, Material)

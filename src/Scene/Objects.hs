@@ -26,12 +26,10 @@ import qualified Prelude
 
 -- * Objects
 
--- TODO: Rename the first two type synonyms @Point@ and @Vector@ to reduce
---       confusion
-type Position = V3 Float
+type Point = V3 Float
 type Direction = V3 Float
 type Color = V3 Float
-type Noraml = (Position, Direction)
+type Noraml = (Point, Direction)
 
 data Scene = Scene
   { _sceneSpheres :: [Exp Sphere]
@@ -39,7 +37,7 @@ data Scene = Scene
   } deriving (Typeable)
 
 data Camera = Camera
-  { _cameraPosition :: Position
+  { _cameraPosition :: Point
   , _cameraRotation :: Direction
   , _cameraFov :: Int
   } deriving (Prelude.Eq, Show, Typeable, Generic, Elt, IsProduct cst)
@@ -51,7 +49,7 @@ data Material = Material
   } deriving (Prelude.Eq, Show, Typeable, Generic, Elt, IsProduct cst)
 
 data Plane = Plane
-  { _planePosition :: Position
+  { _planePosition :: Point
   , _planeDirection :: Direction
   , _planeMaterial :: Material
   } deriving (Prelude.Eq, Show, Typeable, Generic, Elt, IsProduct cst)
@@ -67,7 +65,7 @@ data Ray a = Ray
   } deriving (Prelude.Eq, Show, Typeable, Generic, Elt, IsProduct cst)
 
 data Sphere = Sphere
-  { _spherePosition :: Position
+  { _spherePosition :: Point
   , _sphereRadius :: Float
   , _sphereMaterial :: Material
   } deriving (Prelude.Eq, Show, Typeable, Generic, Elt, IsProduct cst)
@@ -115,11 +113,11 @@ instance Elt a => HasOrigin (Ray a) (V3 a) where
 
 class HasPosition t a | t -> a where
   position :: Getter (Exp t) (Exp a)
-instance HasPosition Camera Position where
+instance HasPosition Camera Point where
   position = to $ \t -> Exp $ SuccTupIdx (SuccTupIdx ZeroTupIdx) `Prj` t
-instance HasPosition Plane Position where
+instance HasPosition Plane Point where
   position = to $ \t -> Exp $ SuccTupIdx (SuccTupIdx ZeroTupIdx) `Prj` t
-instance HasPosition Sphere Position where
+instance HasPosition Sphere Point where
   position = to $ \t -> Exp $ SuccTupIdx (SuccTupIdx ZeroTupIdx) `Prj` t
 
 class HasRadius t a | t -> a where
@@ -144,7 +142,7 @@ instance HasSpecularity Material Float where
 rotation' :: Lens' Camera Direction
 rotation' f c@Camera {_cameraRotation = rot} =
   (\x -> c {_cameraRotation = x}) <$> f rot
-position' :: Lens' Camera Position
+position' :: Lens' Camera Point
 position' f c@Camera {_cameraPosition = pos} =
   (\x -> c {_cameraPosition = x}) <$> f pos
 
@@ -153,19 +151,19 @@ position' f c@Camera {_cameraPosition = pos} =
 -- See the documentation for 'Data.Array.Accelerate' for more information about
 -- these.
 
-pattern Camera' :: Exp Position -> Exp Direction -> Exp Int -> Exp Camera
+pattern Camera' :: Exp Point -> Exp Direction -> Exp Int -> Exp Camera
 pattern Camera' p d f = Pattern (p, d, f)
 
 pattern Material' :: Exp Color -> Exp Float -> Exp Float -> Exp Material
 pattern Material' c s i = Pattern (c, s, i)
 
-pattern Plane' :: Exp Position -> Exp Direction -> Exp Material -> Exp Plane
+pattern Plane' :: Exp Point -> Exp Direction -> Exp Material -> Exp Plane
 pattern Plane' p d m = Pattern (p, d, m)
 
 pattern Ray' :: Elt a => Exp (V3 a) -> Exp (V3 a) -> Exp (Ray a)
 pattern Ray' o d = Pattern (o, d)
 
-pattern Sphere' :: Exp Position -> Exp Float -> Exp Material -> Exp Sphere
+pattern Sphere' :: Exp Point -> Exp Float -> Exp Material -> Exp Sphere
 pattern Sphere' p r m = Pattern (p, r, m)
 
 -- * Instances

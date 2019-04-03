@@ -43,13 +43,12 @@ import Foreign.C.Types (CInt(..))
 import qualified Graphics.GLUtil as GLU
 import qualified Graphics.Rendering.OpenGL as GL
 import Linear (V2)
-import SDL hiding (get, translation)
+import SDL hiding (Point, get, translation)
 import qualified SDL
-import SDL.Vect (Point(..))
 
 import Lib
 import Scene
-import Scene.Objects (Camera, Color, Direction, Position, rotation')
+import Scene.Objects (Camera, Color, Direction, Point, rotation')
 import Scene.World (initialCamera)
 import TH
 import Util
@@ -140,7 +139,7 @@ inputLoop window mResult = evalStateT go initialDeltas
 
     -- We use the 'State' monad to accumulate camera movements before processing
     -- them to prevent unneeded camera updates.
-    go :: StateT (Position, Direction) IO ()
+    go :: StateT (Point, Direction) IO ()
     go = do
       V2 width height <- liftIO $ SDL.get $ windowSize window
       events <- map eventPayload <$> pollEvents

@@ -90,7 +90,7 @@ primaryRays ~(Camera' cPos cRot cFov) = map transform
           -- two.
           V2' screenX screenY = rasterPos / screenSize * 2.0 + V2' (-1.0) 1.0
 
-          virtualPoint :: Exp Position
+          virtualPoint :: Exp Point
           virtualPoint = planeCenter + (planeRightOffset ^* screenX) + (planeTopOffset ^* screenY)
           rayDir :: Exp (V3 Float)
           rayDir = normalize $ virtualPoint - cPos
