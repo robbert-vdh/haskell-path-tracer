@@ -121,8 +121,10 @@ traceRay limit scene primaryRay =
        in if nearZero multiplier || isNothing nextHit
             then T3 (T2 ray seed) result 0.0
             else let T2 (Ray' intersection iNormal) iMaterial = fromJust nextHit
+                     -- The next ray should be fired somewhere in the hemisphere
+                     -- of the intersected primitives' normal
                      T2 rotationVector nextSeed = genVec seed
-                     nextDirection = rotate (anglesToQuaternion pi rotationVector) iNormal
+                     nextDirection = rotate (anglesToQuaternion $ pi *^ rotationVector) iNormal
                      nextRay = Ray' (intersection + nextDirection ^* epsilon) nextDirection
 
                      emittance = (iMaterial ^. color) ^* (iMaterial ^. illuminance)

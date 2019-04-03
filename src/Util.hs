@@ -19,7 +19,7 @@ import qualified System.Random.MWC as Rng
 import qualified Linear as L
 
 import qualified Data.List as P
-import Prelude ((<$>), (<*>), return, IO)
+import Prelude ((<$>), (<*>), IO)
 import qualified Prelude as P
 
 import Intersection
@@ -36,24 +36,48 @@ scalar x = fromList Z [x]
 -- ** Vector operations
 
 -- | Convert the euler angles stored in the 'Camera' to a looking direction
---
--- TODO: Find out whether this normalize is necesary
 anglesToDirection :: Exp Direction -> Exp Direction
 anglesToDirection angles =
-  normalize $ rotate (anglesToQuaternion 1 angles) $ constant forwardVector
+  rotate (anglesToQuaternion angles) $ constant forwardVector
+
+-- | Convert an unnormalized euler axis rotation vector into a 'Quaternion'. The
+-- conversion was copied from
+-- https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles#Source_Code.
+anglesToQuaternion :: Exp Direction -> Exp (Quaternion Float)
+anglesToQuaternion ~(V3' roll pitch yaw) =
+  Quaternion' (cy' * cp' * cr' + sy' * sp' * sr') $
+  V3'
+    (cy' * cp' * sr' - sy' * sp' * cr')
+    (sy' * cp' * sr' + cy' * sp' * cr')
+    (sy' * cp' * cr' - cy' * sp' * sr')
+  where
+    cy' = cos $ yaw * 0.5
+    sy' = sin $ yaw * 0.5
+    cp' = cos $ pitch * 0.5
+    sp' = sin $ pitch * 0.5
+    cr' = cos $ roll * 0.5
+    sr' = sin $ roll * 0.5
 
 -- | Convert an unnormalized euler axis rotation vector into a 'Quaternion'.
-anglesToQuaternion :: Exp Float -> Exp Direction -> Exp (Quaternion Float)
-anglesToQuaternion scale angles = axisAngle angles $ scale * norm angles
-
--- | Convert an unnormalized euler axis rotation vector into a 'Quaternion'.
-anglesToQuaternion' :: Float -> Direction -> Quaternion Float
-anglesToQuaternion' scale angles = L.axisAngle angles $ scale * L.norm angles
+anglesToQuaternion' :: Direction -> Quaternion Float
+anglesToQuaternion' (V3 roll pitch yaw) =
+  Quaternion (cy * cp * cr + sy * sp * sr) $
+  V3
+    (cy * cp * sr - sy * sp * cr)
+    (sy * cp * sr + cy * sp * cr)
+    (sy * cp * cr - cy * sp * sr)
+  where
+    cy = cos $ yaw * 0.5
+    sy = sin $ yaw * 0.5
+    cp = cos $ pitch * 0.5
+    sp = sin $ pitch * 0.5
+    cr = cos $ roll * 0.5
+    sr = sin $ roll * 0.5
 
 translate :: Direction -> Camera -> Camera
 translate delta camera = camera & position' +~ translation
   where
-    translation = L.rotate (anglesToQuaternion' 1 $ camera ^. rotation') delta
+    translation = L.rotate (anglesToQuaternion' $ camera ^. rotation') delta
 
 -- | Transform homogeneous coordinates back into regular vectors. There is a
 -- function in 'Linear.V4' that has the same signature, but it also normalizes

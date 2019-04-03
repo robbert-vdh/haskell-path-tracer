@@ -98,7 +98,7 @@ main = do
 
   computationThreadId <- forkOS $ computationLoop mResult
   graphicsThreadId <- forkOS $ graphicsLoop window mResult
-  inputLoop window mResult
+  inputLoop mResult
 
   killThread graphicsThreadId
   killThread computationThreadId
@@ -119,7 +119,7 @@ computationLoop mResult =
 
     let !texture' = (result ^. compute) $! (result ^. texture)
         !result' = result & texture .~ texture' & iterations +~ 1
-    _ <- putMVar mResult $! result'
+    void $ putMVar mResult $! result'
     print $ result ^. iterations
 
     -- The RNGs should be reseeded every 2000 iterations to prevent
@@ -132,8 +132,8 @@ computationLoop mResult =
 -- | Handle the user input. The 'Result' 'MVar' gets updated whenever the camera
 -- gets moved. This should be run in the main thread, since quitting the
 -- application will end this action.
-inputLoop :: Window -> MVar Result -> IO ()
-inputLoop window mResult = evalStateT go initialDeltas
+inputLoop :: MVar Result -> IO ()
+inputLoop mResult = evalStateT go initialDeltas
   where
     initialDeltas = (V3 0.0 0.0 0.0, V3 0.0 0.0 0.0)
 
@@ -141,28 +141,34 @@ inputLoop window mResult = evalStateT go initialDeltas
     -- them to prevent unneeded camera updates.
     go :: StateT (Point, Direction) IO ()
     go = do
-      V2 width height <- liftIO $ SDL.get $ windowSize window
       events <- map eventPayload <$> pollEvents
 
       keyDown <- getKeyboardState
-      mouseDown <- getMouseButtons
-      let allowMouseMovement = mouseDown ButtonRight
-          shouldQuit =
+      allowMouseMovement <- (==) RelativeLocation <$> getMouseLocationMode
+      let shouldQuit =
             QuitEvent `elem` events || keyDown ScancodeQ || keyDown ScancodeEscape
 
       -- Camera movement
-      windowGrab window $= allowMouseMovement
-      cursorVisible $= not allowMouseMovement
-      when allowMouseMovement $
-        forM_ events
-          (\case
-            MouseMotionEvent MouseMotionEventData {
-                mouseMotionEventRelMotion = V2 (adjustSensitivity -> dx)
-                                               (adjustSensitivity -> dy) , .. } -> do
-              modify $ \(t, r) -> (t, r + V3 dx dy 0.0)
-              liftIO $ warpMouse WarpCurrentFocus $ P $ V2 (width `quot` 2)
-                                                           (height `quot` 2)
-            _ -> return ())
+      forM_ events
+        (\case
+           -- The right mouse button enables mouse look. SDL's relative mouse
+           -- location mode also implicitely hides the cursor and enables
+           -- window grab.
+           MouseButtonEvent MouseButtonEventData { mouseButtonEventButton = ButtonRight
+                                                 , mouseButtonEventMotion = motion
+                                                 , ..
+                                                 } ->
+             void $ setMouseLocationMode $ if motion == Pressed
+               then RelativeLocation
+               else AbsoluteLocation
+           -- Mouse movement should only be precessed while the right mouse
+           -- button is being held down
+           MouseMotionEvent MouseMotionEventData { mouseMotionEventRelMotion = V2 (adjustSensitivity -> dx)
+                                                                                  (adjustSensitivity -> dy)
+                                                 , ..
+                                                 } | allowMouseMovement ->
+             modify $ \(t, r) -> (t, r + V3 dy dx 0.0)
+           _ -> return ())
 
       -- TODO: Make the distance relative to the elapsed time
       -- TODO: Either print or overlay the keybindings when the application
@@ -201,7 +207,7 @@ inputLoop window mResult = evalStateT go initialDeltas
 -- | Render the texture created by Accelerate using OpenGL.
 graphicsLoop :: Window -> MVar Result -> IO ()
 graphicsLoop window mResult = do
-  _glContext <- glCreateContext window
+  void $ glCreateContext window
   (program, vao) <- initResources
 
   forever $ do
@@ -288,4 +294,4 @@ screenQuad =
 -- | Convert mouse movement from actual screen pixels into a floating point
 -- representation that can be used for camera rotation.
 adjustSensitivity :: Int32 -> Float
-adjustSensitivity n = fromIntegral n * 0.001
+adjustSensitivity n = fromIntegral n * (-0.001)
