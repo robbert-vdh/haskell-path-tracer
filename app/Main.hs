@@ -166,18 +166,19 @@ inputLoop window mResult = evalStateT go initialDeltas
             _ -> return ())
 
       -- TODO: Make the distance relative to the elapsed time
+      let movementSpeed = if keyDown ScancodeLShift then 0.2 else 0.05
       when (keyDown ScancodeW) $
-        modify $ \(t, r) -> (t + V3 0.0 0.0 (-0.05), r)
+        modify $ \(t, r) -> (t + V3 0.0 0.0 (negate movementSpeed), r)
       when (keyDown ScancodeS) $
-        modify $ \(t, r) -> (t + V3 0.0 0.0 0.05, r)
+        modify $ \(t, r) -> (t + V3 0.0 0.0 movementSpeed, r)
       when (keyDown ScancodeA) $
-        modify $ \(t, r) -> (t + V3 (-0.05) 0.0 0.0, r)
+        modify $ \(t, r) -> (t + V3 (negate movementSpeed) 0.0 0.0, r)
       when (keyDown ScancodeD) $
-        modify $ \(t, r) -> (t + V3 0.05 0.0 0.0, r)
+        modify $ \(t, r) -> (t + V3 movementSpeed 0.0 0.0, r)
       when (keyDown ScancodeLCtrl) $
-        modify $ \(t, r) -> (t + V3 0.0 (-0.05) 0.0, r)
+        modify $ \(t, r) -> (t + V3 0.0 (negate movementSpeed) 0.0, r)
       when (keyDown ScancodeSpace) $
-        modify $ \(t, r) -> (t + V3 0.0 0.05 0.0, r)
+        modify $ \(t, r) -> (t + V3 0.0 movementSpeed 0.0, r)
 
       -- We should update the camera only when we receive user input. If the
       -- camera does get moved, we should reset the current result.
