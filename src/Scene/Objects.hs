@@ -34,8 +34,8 @@ type Color = V3 Float
 type Noraml = (Position, Direction)
 
 data Scene = Scene
-  { _sceneSpheres :: [Sphere]
-  , _scenePlanes :: [Plane]
+  { _sceneSpheres :: [Exp Sphere]
+  , _scenePlanes :: [Exp Plane]
   } deriving (Typeable)
 
 data Camera = Camera

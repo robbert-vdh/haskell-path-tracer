@@ -145,16 +145,13 @@ reseed m =
 -- than they should be.
 
 -- | Map a function over every object in a scene.
---
--- TODO: Check whether there's a performance benefit to storing the primitives
---       as 'Exp''s instead of using 'constant' here.
 mapScene ::
      Elt a
   => (forall p. Primitive p =>
                   Exp p -> Exp a)
   -> Scene
   -> [Exp a]
-mapScene f (Scene s p) = P.map (f . constant) s P.++ P.map (f . constant) p
+mapScene f (Scene s p) = P.map f s P.++ P.map f p
 
 -- | Determines whether the predicate returns 'True' for any value in the list.
 expAny :: (Exp a -> Exp Bool) -> [Exp a] -> Exp Bool

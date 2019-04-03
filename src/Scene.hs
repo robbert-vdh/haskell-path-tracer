@@ -48,7 +48,7 @@ render screen camera acc =
   where
     rays = primaryRays (the camera) screen
     seeds = map snd acc
-    result = map (traceRay 20 getObjects) $ zip rays seeds
+    result = map (traceRay 20 mainScene) $ zip rays seeds
 
 -- | Calculate the origin and directions of the primary rays based on a camera
 -- and a matrix of screen pixel positions. These positions should be in the
