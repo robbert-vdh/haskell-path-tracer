@@ -115,12 +115,18 @@ compileFor = runN render screenPixels
 computationLoop :: MVar Result -> IO ()
 computationLoop mResult =
   forever $ do
+    -- XXX: Constantly locking this MVar cuts the throughput by almost 40%. One
+    --      way to get a little bit more speed would be render multiple samples
+    --      at once, but this makes the input handling much less responsive. A
+    --      possible solution to this would be to start rendering mulitple
+    --      samples as once whenever the number of iterations exceeds a certain
+    --      threshold.
     result <- takeMVar mResult
 
     let !texture' = (result ^. compute) $! (result ^. texture)
         !result' = result & texture .~ texture' & iterations +~ 1
     void $ putMVar mResult $! result'
-    print $ result ^. iterations
+    print $ result' ^. iterations
 
     -- The RNGs should be reseeded every 2000 iterations to prevent
     -- convergence
