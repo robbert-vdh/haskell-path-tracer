@@ -29,7 +29,7 @@ module Main where
 
 import Control.Concurrent
 import Control.Lens
-import Control.Monad (forM_, unless, when, void)
+import Control.Monad (forM_, forever, unless, void, when)
 import Control.Monad.IO.Class
 import Control.Monad.Trans.State.Strict
 import qualified Data.Array.Accelerate as A
@@ -92,7 +92,6 @@ main = do
       , _resultCamera = initialCamera
       }
 
-  -- TODO: Unify the structure of these three functions
   computationThreadId <- forkOS $ computationLoop mResult
   graphicsThreadId <- forkOS $ graphicsLoop window mResult
   inputLoop window mResult
@@ -112,24 +111,21 @@ compileFor = runN render screenPixels
 -- shares and 'MVar' with the rendering thread to prevent one of the processes
 -- from blocking another.
 computationLoop :: MVar Result -> IO ()
-computationLoop mResult = go
-  where
-    go = do
-      result <- takeMVar mResult
+computationLoop mResult =
+  forever $ do
+    result <- takeMVar mResult
 
-      let !texture' = (result ^. compute) $! (result ^. texture)
-          !result' = result & texture .~ texture' & iterations +~ 1
-      _ <- putMVar mResult $! result'
-      print $ result ^. iterations
+    let !texture' = (result ^. compute) $! (result ^. texture)
+        !result' = result & texture .~ texture' & iterations +~ 1
+    _ <- putMVar mResult $! result'
+    print $ result ^. iterations
 
-      -- The RNGs should be reseeded every 2000 iterations to prevent
-      -- convergence
-      -- TODO: Refactor out this double read/swap and any data races
-      when ((result ^. iterations) `rem` 2000 == 0) $ do
-        reseeded <- reseed texture'
-        void $ putMVar mResult $ result' & texture .~ reseeded
-
-      go
+    -- The RNGs should be reseeded every 2000 iterations to prevent
+    -- convergence
+    -- TODO: Refactor out this double read/swap and any data races
+    when ((result ^. iterations) `rem` 2000 == 0) $ do
+      reseeded <- reseed texture'
+      void $ putMVar mResult $ result' & texture .~ reseeded
 
 -- | Handle the user input. The 'Result' 'MVar' gets updated whenever the camera
 -- gets moved. This should be run in the main thread, since quitting the
@@ -203,48 +199,45 @@ graphicsLoop window mResult = do
   _glContext <- glCreateContext window
   (program, vao) <- initResources
 
-  let go = do
-        V2 width height <- SDL.get $ windowSize window
-        GL.viewport $=
-          (GL.Position 0 0, GL.Size (fromIntegral width) (fromIntegral height))
+  forever $ do
+    V2 width height <- SDL.get $ windowSize window
+    GL.viewport $=
+      (GL.Position 0 0, GL.Size (fromIntegral width) (fromIntegral height))
 
-        -- XXX: This is a LOT faster than using 'A.toList' but I feel dirty even
-        --      looking at it. Is there really not a better way?
-        result <- readMVar mResult
-        let (((), ((((), r), g), b)), _) = A.toVectors $ result ^. texture
-            pixelBuffer = V.zipWith3 V3 r g b
+    -- XXX: This is a LOT faster than using 'A.toList' but I feel dirty even
+    --      looking at it. Is there really not a better way?
+    result <- readMVar mResult
+    let (((), ((((), r), g), b)), _) = A.toVectors $ result ^. texture
+        pixelBuffer = V.zipWith3 V3 r g b
 
-        GL.clearColor $= GL.Color4 0.5 0.5 0.5 1.0
-        GL.clear [GL.ColorBuffer]
+    GL.clearColor $= GL.Color4 0.5 0.5 0.5 1.0
+    GL.clear [GL.ColorBuffer]
 
-        -- We have to transform our @[V3 Float]@ into a format the OpenGL pixel
-        -- transfer knows how to deal with. We could use a combination of
-        -- 'concatMap' and 'GLU.withPixels' here, but that takes almost 200
-        -- miliseconds combined.
-        unsafeWith pixelBuffer $ \p ->
-          GL.texImage2D
-            GL.Texture2D
-            GL.NoProxy
-            0
-            -- OpenGL will neatly normalize our texture to [0, 1] floating point
-            -- values if we use the 'GL.RGB'' internal representation instead.
-            -- Not like we've done this or anything.
-            GL.RGB32F
-            (GL.TextureSize2D screenWidth screenHeight)
-            0
-            (GL.PixelData GL.RGB GL.Float p)
+    -- We have to transform our @[V3 Float]@ into a format the OpenGL pixel
+    -- transfer knows how to deal with. We could use a combination of
+    -- 'concatMap' and 'GLU.withPixels' here, but that takes almost 200
+    -- miliseconds combined.
+    unsafeWith pixelBuffer $ \p ->
+      GL.texImage2D
+        GL.Texture2D
+        GL.NoProxy
+        0
+        -- OpenGL will neatly normalize our texture to [0, 1] floating point
+        -- values if we use the 'GL.RGB'' internal representation instead. Not
+        -- like we've done this or anything.
+        GL.RGB32F
+        (GL.TextureSize2D screenWidth screenHeight)
+        0
+        (GL.PixelData GL.RGB GL.Float p)
 
-        GLU.setUniform program "u_iterations"
-          (fromIntegral (result ^. iterations) :: GL.GLint)
-        GLU.setUniform program "u_texture" (0 :: GL.GLint)
+    GLU.setUniform program "u_iterations"
+      (fromIntegral (result ^. iterations) :: GL.GLint)
+    GLU.setUniform program "u_texture" (0 :: GL.GLint)
 
-        GL.bindVertexArrayObject $= Just vao
-        GL.drawArrays GL.Triangles 0 6
+    GL.bindVertexArrayObject $= Just vao
+    GL.drawArrays GL.Triangles 0 6
 
-        glSwapWindow window
-        go
-
-  go
+    glSwapWindow window
 
 -- | Iniitalize the OpenGL shaders and all static buffers.
 initResources :: IO (GLU.ShaderProgram, GL.VertexArrayObject)
