@@ -55,7 +55,7 @@ mainScene = Scene (map A.constant spheres') (map A.constant planes')
               Material
                 { _materialColor = V3 0.8 0.8 0.8
                 , _materialSpecularity = 0.5
-                , _materialIlluminance = 300.0
+                , _materialIlluminance = 5420.0
                 }
           }
       ]
@@ -77,7 +77,7 @@ mainScene = Scene (map A.constant spheres') (map A.constant planes')
               Material
                 { _materialColor = V3 1.0 1.0 1.0
                 , _materialSpecularity = 0.1
-                , _materialIlluminance = 0.8
+                , _materialIlluminance = 20.0
                 }
           }
       ]

@@ -48,7 +48,7 @@ render screen camera acc =
   where
     rays = primaryRays (the camera) screen
     seeds = map snd acc
-    result = map (traceRay 20 mainScene) $ zip rays seeds
+    result = map (traceRay 15 mainScene) $ zip rays seeds
 
 -- | Calculate the origin and directions of the primary rays based on a camera
 -- and a matrix of screen pixel positions. These positions should be in the
@@ -96,8 +96,6 @@ primaryRays ~(Camera' cPos cRot cFov) = map transform
           rayDir = normalize $ virtualPoint - cPos
        in Ray' cPos rayDir
 
--- ** Single ray, multiple objects
-
 -- | Calculate the amount of light that a given ray would collect when shot into
 -- the scene. In other words, calculate what color the pixel that corresponds to
 -- the ray should be.
@@ -128,13 +126,12 @@ traceRay limit scene primaryRay =
                      nextRay = Ray' (intersection + nextDirection ^* epsilon) nextDirection
 
                      emittance = (iMaterial ^. color) ^* (iMaterial ^. illuminance)
-                     brdf =
-                       2.0 * (iMaterial ^. specularity) *
-                       ((nextRay ^. direction) `dot` iNormal)
+                     brdf = (iMaterial ^. specularity) / pi * ((nextRay ^. direction) `dot` iNormal)
+                     nextRayProb = 1 / (pi * 2)
                   in T3
                        (T2 nextRay nextSeed)
                        (result + (emittance ^* multiplier))
-                       (multiplier * brdf)
+                       (multiplier * brdf * nextRayProb)
 
 closestIntersection :: Scene -> Exp RayF -> Exp (Maybe (Normal, Material))
 closestIntersection scene ray =
