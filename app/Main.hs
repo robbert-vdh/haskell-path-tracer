@@ -137,6 +137,15 @@ inputLoop mResult = evalStateT go initialDeltas
   where
     initialDeltas = (V3 0.0 0.0 0.0, V3 0.0 0.0 0.0)
 
+    -- | Cap the camera rotation's roll (the vertical rotation). Otherwise
+    -- continuously rotating the camera upwards results in some wierd behaviour.
+    clampRoll :: Direction -> Direction
+    clampRoll (V3 roll pitch yaw) =
+      V3 (min maxRoll $ max minRoll roll) pitch yaw
+      where
+        minRoll = negate pi / 2 + 0.001
+        maxRoll = pi / 2 - 0.001
+
     -- We use the 'State' monad to accumulate camera movements before processing
     -- them to prevent unneeded camera updates.
     go :: StateT (Point, Direction) IO ()
@@ -194,7 +203,9 @@ inputLoop mResult = evalStateT go initialDeltas
         emptyOutput <- liftIO initialOutput
         result <- liftIO $ takeMVar mResult
 
-        let updatedCamera = result ^. camera & rotation' +~ rotation & translate translation
+        let updatedCamera = result ^. camera & rotation' +~ rotation
+                                             & rotation' %~ clampRoll
+                                             & translate translation
             compute' = compileFor $ scalar updatedCamera
             result' = result & iterations .~ 1 & texture .~ emptyOutput
                              & camera .~ updatedCamera & compute .~ compute'
