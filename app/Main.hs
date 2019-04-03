@@ -166,6 +166,8 @@ inputLoop window mResult = evalStateT go initialDeltas
             _ -> return ())
 
       -- TODO: Make the distance relative to the elapsed time
+      -- TODO: Either print or overlay the keybindings when the application
+      --       start
       let movementSpeed = if keyDown ScancodeLShift then 0.2 else 0.05
       when (keyDown ScancodeW) $
         modify $ \(t, r) -> (t + V3 0.0 0.0 (negate movementSpeed), r)
