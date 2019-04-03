@@ -125,7 +125,7 @@ computationLoop mResult =
     -- TODO: Refactor out this double read/swap and any data races
     when ((result ^. iterations) `rem` 2000 == 0) $ do
       reseeded <- reseed texture'
-      void $ putMVar mResult $ result' & texture .~ reseeded
+      void $ swapMVar mResult $ result' & texture .~ reseeded
 
 -- | Handle the user input. The 'Result' 'MVar' gets updated whenever the camera
 -- gets moved. This should be run in the main thread, since quitting the
