@@ -30,7 +30,6 @@ module Main where
 import Control.Concurrent
 import Control.Lens
 import Control.Monad (forM_, forever, unless, void, when)
-import Control.Monad.IO.Class
 import Control.Monad.Trans.State.Strict
 import qualified Data.Array.Accelerate as A
 import qualified Data.Array.Accelerate.IO.Data.Vector.Storable as A
@@ -115,25 +114,33 @@ compileFor = runN render screenPixels
 computationLoop :: MVar Result -> IO ()
 computationLoop mResult =
   forever $ do
-    -- XXX: Constantly locking this MVar cuts the throughput by almost 40%. One
-    --      way to get a little bit more speed would be render multiple samples
-    --      at once, but this makes the input handling much less responsive. A
-    --      possible solution to this would be to start rendering mulitple
-    --      samples as once whenever the number of iterations exceeds a certain
-    --      threshold.
     result <- takeMVar mResult
 
-    let !texture' = (result ^. compute) $! (result ^. texture)
-        !result' = result & texture .~ texture' & iterations +~ 1
+    -- We can gain some performance by calculating multiple samples at once, but
+    -- it'll reduce the responsiveness of our application. By doing this only
+    -- once we reach a certain threshold we can still make use of this
+    -- optimization while keeping it responsive.
+    let batchSize = max 30 $ (result ^. iterations) `div` 50
+        !(!iterations', !texture') =
+          if (result ^. iterations) > 100
+            then (batchSize, doTimes batchSize (result ^. compute) $! (result ^. texture))
+            else (1, (result ^. compute) $! (result ^. texture))
+        !result' = result & texture .~ texture' & iterations +~ iterations'
+
     void $ putMVar mResult $! result'
     print $ result' ^. iterations
 
     -- The RNGs should be reseeded every 2000 iterations to prevent
     -- convergence
     -- TODO: Refactor out this double read/swap and any data races
+    -- TODO: We can now skip over this interval because of the batching
     when ((result ^. iterations) `rem` 2000 == 0) $ do
       reseeded <- reseed texture'
       void $ swapMVar mResult $ result' & texture .~ reseeded
+  where
+    -- | Compose a function with itself @n@ times.
+    doTimes :: Int -> (a -> a) -> a -> a
+    doTimes n f = (!! n) . iterate f
 
 -- | Handle the user input. The 'Result' 'MVar' gets updated whenever the camera
 -- gets moved. This should be run in the main thread, since quitting the
