@@ -139,8 +139,9 @@ computationLoop mResult =
 -- gets moved. This should be run in the main thread, since quitting the
 -- application will end this action.
 inputLoop :: MVar Result -> IO ()
-inputLoop mResult = evalStateT go initialDeltas
+inputLoop mResult = go
   where
+    initialDeltas :: (Point, Direction)
     initialDeltas = (V3 0.0 0.0 0.0, V3 0.0 0.0 0.0)
 
     -- | Cap the camera rotation's roll (the vertical rotation). Otherwise
@@ -152,9 +153,6 @@ inputLoop mResult = evalStateT go initialDeltas
         minRoll = negate pi / 2 + 0.001
         maxRoll = pi / 2 - 0.001
 
-    -- We use the 'State' monad to accumulate camera movements before processing
-    -- them to prevent unneeded camera updates.
-    go :: StateT (Point, Direction) IO ()
     go = do
       events <- map eventPayload <$> pollEvents
 
@@ -164,60 +162,62 @@ inputLoop mResult = evalStateT go initialDeltas
             QuitEvent `elem` events || keyDown ScancodeQ || keyDown ScancodeEscape
 
       -- Camera movement
-      forM_ events
-        (\case
-           -- The right mouse button enables mouse look. SDL's relative mouse
-           -- location mode also implicitely hides the cursor and enables
-           -- window grab.
-           MouseButtonEvent MouseButtonEventData { mouseButtonEventButton = ButtonRight
-                                                 , mouseButtonEventMotion = motion
-                                                 , ..
-                                                 } ->
-             void $ setMouseLocationMode $ if motion == Pressed
-               then RelativeLocation
-               else AbsoluteLocation
-           -- Mouse movement should only be precessed while the right mouse
-           -- button is being held down
-           MouseMotionEvent MouseMotionEventData { mouseMotionEventRelMotion = V2 (adjustSensitivity -> dx)
-                                                                                  (adjustSensitivity -> dy)
-                                                 , ..
-                                                 } | allowMouseMovement ->
-             modify $ \(t, r) -> (t, r + V3 dy dx 0.0)
-           _ -> return ())
+      -- We use the 'State' monad to accumulate camera movements before processing
+      -- them to prevent unneeded camera updates.
+      deltas@(translation, rotation) <- flip execStateT initialDeltas $ do
+        forM_ events
+          (\case
+            -- The right mouse button enables mouse look. SDL's relative mouse
+            -- location mode also implicitely hides the cursor and enables
+            -- window grab.
+            MouseButtonEvent MouseButtonEventData { mouseButtonEventButton = ButtonRight
+                                                  , mouseButtonEventMotion = motion
+                                                  , ..
+                                                  } ->
+              void $ setMouseLocationMode $ if motion == Pressed
+                then RelativeLocation
+                else AbsoluteLocation
+            -- Mouse movement should only be precessed while the right mouse
+            -- button is being held down
+            MouseMotionEvent MouseMotionEventData { mouseMotionEventRelMotion =
+                                                      V2 (adjustSensitivity -> dx)
+                                                         (adjustSensitivity -> dy)
+                                                  , ..
+                                                  } | allowMouseMovement ->
+              modify $ \(t, r) -> (t, r + V3 dy dx 0.0)
+            _ -> return ())
 
-      -- TODO: Make the distance relative to the elapsed time
-      -- TODO: Either print or overlay the keybindings when the application
-      --       start
-      let movementSpeed = if keyDown ScancodeLShift then 0.2 else 0.05
-      when (keyDown ScancodeW) $
-        modify $ \(t, r) -> (t + V3 0.0 0.0 (negate movementSpeed), r)
-      when (keyDown ScancodeS) $
-        modify $ \(t, r) -> (t + V3 0.0 0.0 movementSpeed, r)
-      when (keyDown ScancodeA) $
-        modify $ \(t, r) -> (t + V3 (negate movementSpeed) 0.0 0.0, r)
-      when (keyDown ScancodeD) $
-        modify $ \(t, r) -> (t + V3 movementSpeed 0.0 0.0, r)
-      when (keyDown ScancodeLCtrl) $
-        modify $ \(t, r) -> (t + V3 0.0 (negate movementSpeed) 0.0, r)
-      when (keyDown ScancodeSpace) $
-        modify $ \(t, r) -> (t + V3 0.0 movementSpeed 0.0, r)
+        -- TODO: Make the distance relative to the elapsed time
+        -- TODO: Either print or overlay the keybindings when the application
+        --       start
+        let movementSpeed = if keyDown ScancodeLShift then 0.2 else 0.05
+        when (keyDown ScancodeW) $
+          modify $ \(t, r) -> (t + V3 0.0 0.0 (negate movementSpeed), r)
+        when (keyDown ScancodeS) $
+          modify $ \(t, r) -> (t + V3 0.0 0.0 movementSpeed, r)
+        when (keyDown ScancodeA) $
+          modify $ \(t, r) -> (t + V3 (negate movementSpeed) 0.0 0.0, r)
+        when (keyDown ScancodeD) $
+          modify $ \(t, r) -> (t + V3 movementSpeed 0.0 0.0, r)
+        when (keyDown ScancodeLCtrl) $
+          modify $ \(t, r) -> (t + V3 0.0 (negate movementSpeed) 0.0, r)
+        when (keyDown ScancodeSpace) $
+          modify $ \(t, r) -> (t + V3 0.0 movementSpeed 0.0, r)
 
       -- We should update the camera only when we receive user input. If the
       -- camera does get moved, we should reset the current result.
-      deltas@(translation, rotation) <- get
       when (deltas /= initialDeltas) $ do
-        emptyOutput <- liftIO initialOutput
-        result <- liftIO $ takeMVar mResult
+        emptyOutput <- initialOutput
+        result <- takeMVar mResult
 
         let updatedCamera = result ^. camera & rotation' +~ rotation
-                                             & rotation' %~ clampRoll
-                                             & translate translation
+                                            & rotation' %~ clampRoll
+                                            & translate translation
             compute' = compileFor $ scalar updatedCamera
             result' = result & iterations .~ 1 & texture .~ emptyOutput
-                             & camera .~ updatedCamera & compute .~ compute'
+                            & camera .~ updatedCamera & compute .~ compute'
 
-        liftIO $ putMVar mResult result'
-        put initialDeltas
+        putMVar mResult result'
 
       unless shouldQuit go
 
