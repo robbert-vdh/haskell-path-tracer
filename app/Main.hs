@@ -30,6 +30,7 @@ module Main where
 import Control.Concurrent
 import Control.Lens
 import Control.Monad (forM_, forever, unless, void, when)
+import Control.Monad.IO.Class
 import Control.Monad.Trans.State.Strict
 import qualified Data.Array.Accelerate as A
 import qualified Data.Array.Accelerate.IO.Data.Vector.Storable as A
@@ -111,33 +112,44 @@ compileFor = runN render screenPixels
 -- | Perform the actual path tracing. This is done in a seperate thread that
 -- shares and 'MVar' with the rendering thread to prevent one of the processes
 -- from blocking another.
+--
+-- We use a 'State' monad here to keep track of when we should reseed our RNGs.
 computationLoop :: MVar Result -> IO ()
 computationLoop mResult =
-  forever $ do
-    result <- takeMVar mResult
+  flip evalStateT reseedInterval $ forever $ do
+    result <- liftIO $ do
+      result <- takeMVar mResult
 
-    -- We can gain some performance by calculating multiple samples at once, but
-    -- it'll reduce the responsiveness of our application. By doing this only
-    -- once we reach a certain threshold we can still make use of this
-    -- optimization while keeping it responsive.
-    let batchSize = max 30 $ (result ^. iterations) `div` 50
-        !(!iterations', !texture') =
-          if (result ^. iterations) > 100
-            then (batchSize, doTimes batchSize (result ^. compute) $! (result ^. texture))
-            else (1, (result ^. compute) $! (result ^. texture))
-        !result' = result & texture .~ texture' & iterations +~ iterations'
+      -- We can gain some performance by calculating multiple samples at once,
+      -- but it'll reduce the responsiveness of our application. By doing this
+      -- only once we reach a certain threshold we can still make use of this
+      -- optimization while keeping it responsive.
+      let batchSize = max 30 $ (result ^. iterations) `div` 50
+          !(!iterations', !texture') =
+            if (result ^. iterations) > 100
+              then (batchSize, doTimes batchSize (result ^. compute) $! (result ^. texture))
+              else (1, (result ^. compute) $! (result ^. texture))
+          !result' = result & texture .~ texture' & iterations +~ iterations'
 
-    void $ putMVar mResult $! result'
-    print $ result' ^. iterations
+      void $ putMVar mResult $! result'
+      print $ result' ^. iterations
 
-    -- The RNGs should be reseeded every 2000 iterations to prevent
-    -- convergence
+      return result
+
+    -- The RNGs should be reseeded every 2000 iterations to prevent convergence
     -- TODO: Refactor out this double read/swap and any data races
-    -- TODO: We can now skip over this interval because of the batching
-    when ((result ^. iterations) `rem` 2000 == 0) $ do
-      reseeded <- reseed texture'
-      void $ swapMVar mResult $ result' & texture .~ reseeded
+    reseedAt <- get
+    if (result ^. iterations) > reseedAt
+      then do
+        liftIO $ do
+          reseeded <- reseed $ result ^. texture
+          void $ swapMVar mResult $ result & texture .~ reseeded
+        modify (+ reseedInterval)
+      else when ((result ^. iterations) < reseedInterval) $ put reseedInterval
   where
+    -- | How many samples we can render before we have to reseed the RNGs
+    reseedInterval :: Int
+    reseedInterval = 2000
     -- | Compose a function with itself @n@ times.
     doTimes :: Int -> (a -> a) -> a -> a
     doTimes n f = (!! n) . iterate f
