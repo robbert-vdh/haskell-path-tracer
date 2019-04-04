@@ -10,7 +10,7 @@ initialCamera =
   Camera
     { _cameraPosition = V3 1.0 (-1.6) (-4.8)
     , _cameraRotation = V3 0.314 (-0.314) 0.0 -- These are Euler angles
-    , _cameraFov = 45
+    , _cameraFov = 90
     }
 
 -- | These are the objects and lights used in our static scene.

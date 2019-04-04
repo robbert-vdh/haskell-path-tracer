@@ -55,13 +55,11 @@ render screen camera acc =
 -- format @V2 <0 .. screenWidth> <0 .. screenHeight>@.
 primaryRays ::
      Exp Camera -> Acc (Matrix (V2 Int)) -> Acc (Matrix RayF)
-primaryRays ~(Camera' cPos cRot cFov) = map transform
+primaryRays ~(Camera' cPos cRot (fromIntegral -> cFov)) = map transform
   where
-    -- | The distance between the camera nd the virtual screen plane
-    --
-    -- TODO: This distance should be calculated based on the FoV
+    -- | The distance between the camera and the virtual screen plane
     screenDistance :: Exp Float
-    screenDistance = 0.05
+    screenDistance = 1.0 / tan((cFov * pi / 180.0) / 2.0 )
 
     -- | The looking direciton of the camera.
     cDir :: Exp Direction
@@ -75,7 +73,7 @@ primaryRays ~(Camera' cPos cRot cFov) = map transform
     planeCenter, planeTopOffset, planeRightOffset :: Exp (V3 Float)
     (planeCenter, planeTopOffset, planeRightOffset) =
       let center = cPos + cDir ^* screenDistance
-          centerOffset = center - cPos
+          centerOffset = normalize $ center - cPos
           rightOffset = centerOffset `cross` constant upVector
           topOffset = (cDir `cross` rightOffset) ^/ screenAspect
        in (center, topOffset, rightOffset)
