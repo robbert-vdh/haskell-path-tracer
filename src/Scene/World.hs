@@ -9,7 +9,7 @@ initialCamera :: Camera
 initialCamera =
   Camera
     { _cameraPosition = V3 1.0 (-1.6) (-4.8)
-    , _cameraRotation = V3 0.314 (-0.314) 0.0 -- These are Euler angles
+    , _cameraRotation = V3 0.314 (-0.314) 0.0
     , _cameraFov = 90
     }
 
@@ -24,8 +24,8 @@ mainScene = Scene (map A.constant spheres') (map A.constant planes')
           , _sphereMaterial =
               Material
                 { _materialColor = V3 0.0 1.0 0.0
-                , _materialSpecularity = 0.7
                 , _materialIlluminance = 0.0
+                , _materialBrdf = Glossy 0.9
                 }
           }
       , Sphere
@@ -34,8 +34,8 @@ mainScene = Scene (map A.constant spheres') (map A.constant planes')
           , _sphereMaterial =
               Material
                 { _materialColor = V3 0.0 0.4 0.0
-                , _materialSpecularity = 0.9
                 , _materialIlluminance = 0.0
+                , _materialBrdf = Diffuse 0.9
                 }
           }
       , Sphere
@@ -44,8 +44,8 @@ mainScene = Scene (map A.constant spheres') (map A.constant planes')
           , _sphereMaterial =
               Material
                 { _materialColor = V3 0.0 0.0 1.0
-                , _materialSpecularity = 0.5
                 , _materialIlluminance = 0.0
+                , _materialBrdf = Glossy 0.8
                 }
           }
       , Sphere
@@ -54,8 +54,8 @@ mainScene = Scene (map A.constant spheres') (map A.constant planes')
           , _sphereMaterial =
               Material
                 { _materialColor = V3 0.8 0.8 0.8
-                , _materialSpecularity = 0.5
                 , _materialIlluminance = 5420.0
+                , _materialBrdf = Glossy 0.5
                 }
           }
       ]
@@ -66,8 +66,8 @@ mainScene = Scene (map A.constant spheres') (map A.constant planes')
           , _planeMaterial =
               Material
                 { _materialColor = V3 0.0 0.0 0.0
-                , _materialSpecularity = 0.9
                 , _materialIlluminance = 0.0
+                , _materialBrdf = Diffuse 1.0
                 }
           }
       , Plane
@@ -76,8 +76,8 @@ mainScene = Scene (map A.constant spheres') (map A.constant planes')
           , _planeMaterial =
               Material
                 { _materialColor = V3 1.0 1.0 1.0
-                , _materialSpecularity = 0.1
                 , _materialIlluminance = 20.0
+                , _materialBrdf = Glossy 0.4
                 }
           }
       ]

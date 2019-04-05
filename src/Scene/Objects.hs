@@ -15,7 +15,7 @@ module Scene.Objects where
 
 import Data.Array.Accelerate as A
 import Data.Array.Accelerate.Array.Sugar
-import Data.Array.Accelerate.Control.Lens
+import Data.Array.Accelerate.Control.Lens hiding (Const)
 import Data.Array.Accelerate.Linear as A
 import Data.Array.Accelerate.Product
 import Data.Array.Accelerate.Smart
@@ -42,19 +42,24 @@ data Camera = Camera
   , _cameraRotation :: Direction
   -- | The camer'a horizontal field of view in degrees.
   , _cameraFov :: Int
-  } deriving (Prelude.Eq, Show, Typeable, Generic, Elt, IsProduct cst)
+  } deriving (Prelude.Eq, Show, Generic, Elt, IsProduct cst)
+
+data Brdf
+  = Diffuse Float
+  | Glossy Float
+  deriving (Prelude.Eq, Show, Typeable)
 
 data Material = Material
   { _materialColor :: Color
-  , _materialSpecularity :: Float
   , _materialIlluminance :: Float
-  } deriving (Prelude.Eq, Show, Typeable, Generic, Elt, IsProduct cst)
+  , _materialBrdf :: Brdf
+  } deriving (Prelude.Eq, Show, Generic, Elt, IsProduct cst)
 
 data Plane = Plane
   { _planePosition :: Point
   , _planeDirection :: Direction
   , _planeMaterial :: Material
-  } deriving (Prelude.Eq, Show, Typeable, Generic, Elt, IsProduct cst)
+  } deriving (Prelude.Eq, Show, Generic, Elt, IsProduct cst)
 
 -- | Any ray that is cast through the scene. This is defined as a type alias as
 -- the 'Ray' has to be polymorphic in order to to be able to lift a @Ray (Exp
@@ -64,13 +69,13 @@ type RayF = Ray Float
 data Ray a = Ray
   { _rayOrigin :: V3 a
   , _rayDirection :: V3 a
-  } deriving (Prelude.Eq, Show, Typeable, Generic, Elt, IsProduct cst)
+  } deriving (Prelude.Eq, Show, Generic, Elt, IsProduct cst)
 
 data Sphere = Sphere
   { _spherePosition :: Point
   , _sphereRadius :: Float
   , _sphereMaterial :: Material
-  } deriving (Prelude.Eq, Show, Typeable, Generic, Elt, IsProduct cst)
+  } deriving (Prelude.Eq, Show, Generic, Elt, IsProduct cst)
 
 -- * Instances
 --
@@ -96,12 +101,45 @@ instance Lift Exp Sphere where
   type Plain Sphere = Sphere
   lift = constant
 
+-- ** BRDF
+--
+-- We can't derive instances for 'Brdf' automatically as Accelerate does not yet
+-- support sum types. To work around this, we simply use define our own tagged
+-- unions as tuples.
+
+instance Elt Brdf where
+  type EltRepr Brdf = EltRepr (Bool, Float)
+  eltType = eltType @(Bool, Float)
+  toElt t = case toElt t of
+              (False, p) -> Diffuse p
+              (True, p) -> Glossy p
+  fromElt (Diffuse p) = fromElt (False, p)
+  fromElt (Glossy p) = fromElt (True, p)
+
+instance (cst Bool, cst Float) => IsProduct cst Brdf where
+  type ProdRepr Brdf = ProdRepr (Bool, Float)
+  toProd t = case toProd @cst t of
+               (False, p) -> Diffuse p
+               (True, p) -> Glossy p
+  fromProd (Diffuse p) = fromProd @cst (False, p)
+  fromProd (Glossy p) = fromProd @cst (True, p)
+  prod = prod @cst @(Bool, Float)
+
+instance Lift Exp Brdf where
+  type Plain Brdf = Brdf
+  lift = constant
+
 -- * Lenses
 --
 -- Since Sphere, Plane and Light do not have a type parameter we can't make use
 -- 'liftLens' or `unlift`, so we'll just define some simple getters ourselves.
 
 makeFields ''Scene
+
+class HasBrdf t a | t -> a where
+  brdf :: Getter (Exp t) (Exp a)
+instance HasBrdf Material Brdf where
+  brdf = to $ \t -> Exp $ ZeroTupIdx `Prj` t
 
 class HasColor t a | t -> a where
   color :: Getter (Exp t) (Exp a)
@@ -123,7 +161,7 @@ instance HasFov Camera Int where
 class HasIlluminance t a | t -> a where
   illuminance :: Getter (Exp t) (Exp a)
 instance HasIlluminance Material Float where
-  illuminance = to $ \t -> Exp $ ZeroTupIdx `Prj` t
+  illuminance = to $ \t -> Exp $ SuccTupIdx ZeroTupIdx `Prj` t
 
 class HasMaterial t a | t -> a where
   material :: Getter (Exp t) (Exp a)
@@ -156,11 +194,6 @@ class HasRotation t a | t -> a where
 instance HasRotation Camera Direction where
   rotation = to $ \t -> Exp $ SuccTupIdx ZeroTupIdx `Prj` t
 
-class HasSpecularity t a | t -> a where
-  specularity :: Getter (Exp t) (Exp a)
-instance HasSpecularity Material Float where
-  specularity = to $ \t -> Exp $ SuccTupIdx ZeroTupIdx `Prj` t
-
 -- These two lenses are used for camera movement. As they're the only two lenses
 -- we need that have setters and are not lifted to 'Exp's we'll dimply define
 -- them manually.
@@ -180,8 +213,8 @@ position' f c@Camera {_cameraPosition = pos} =
 pattern Camera' :: Exp Point -> Exp Direction -> Exp Int -> Exp Camera
 pattern Camera' p d f = Pattern (p, d, f)
 
-pattern Material' :: Exp Color -> Exp Float -> Exp Float -> Exp Material
-pattern Material' c s i = Pattern (c, s, i)
+pattern Material' :: Exp Color -> Exp Float -> Exp Brdf -> Exp Material
+pattern Material' c i b = Pattern (c, i, b)
 
 pattern Plane' :: Exp Point -> Exp Direction -> Exp Material -> Exp Plane
 pattern Plane' p d m = Pattern (p, d, m)
@@ -191,3 +224,24 @@ pattern Ray' o d = Pattern (o, d)
 
 pattern Sphere' :: Exp Point -> Exp Float -> Exp Material -> Exp Sphere
 pattern Sphere' p r m = Pattern (p, r, m)
+
+-- ** BRDF
+--
+-- Accelerate does not yet support sum types, but we can simply pattern match on
+-- the product representation to get the same effect.
+
+pattern Brdf' :: Exp Bool -> Exp Float -> Exp Brdf
+pattern Brdf' t p = Pattern (t, p)
+
+-- These sadly don't work, but I'll leave them in until they somehow do
+pattern Diffuse' :: Exp Float -> Exp Brdf
+pattern Diffuse' p = Brdf' (Exp (Const False)) p
+
+pattern Glossy' :: Exp Float -> Exp Brdf
+pattern Glossy' p = Brdf' (Exp (Const True)) p
+
+isDiffuse, isGlossy :: Exp Brdf -> Exp Bool
+isDiffuse (Brdf' t _) = t == constant False
+isDiffuse _ = constant False
+isGlossy (Brdf' t _) = t == constant True
+isGlossy _ = constant False

@@ -103,9 +103,13 @@ primaryRays ~(Camera' cPos cRot (fromIntegral -> cFov)) = map transform
 -- nextRay)@, we return @old_result + (emittance * multiplier)@, where
 -- multiplier is a comulative product of the BRDFs.
 --
--- TODO: The BRDF is rather simplistic and should be expanded upon
 -- TODO: The BRDF should probably take the material of non-illuminating props
---       into account (a red ball should not be able to reflect green light)
+--       into account (a red ball should not be able to reflect green light).
+--       I'm not sure if this is the cannonical sollution, but storing the
+--       multiplier (maybe rename that to throughput) as a 'V3 Float' would
+--       solve this issue.
+-- TODO: Move the else branch to another local declaration and the whole BRDF
+--       calculation to its own function for readability's sake
 traceRay :: Exp Int -> Scene -> Exp (RayF, Word32) -> Exp (Color, Word32)
 traceRay limit scene primaryRay =
   let T3 (T2 _ seed) result _ = iterate limit go (T3 primaryRay (V3' 0 0 0) 1.0)
@@ -117,19 +121,44 @@ traceRay limit scene primaryRay =
        in if nearZero multiplier || isNothing nextHit
             then T3 (T2 ray seed) result 0.0
             else let T2 (Ray' intersection iNormal) iMaterial = fromJust nextHit
-                     -- The next ray should be fired somewhere in the hemisphere
-                     -- of the intersected primitives' normal
                      T2 rotationVector nextSeed = genVec seed
-                     nextDirection = rotate (anglesToQuaternion $ pi *^ rotationVector) iNormal
-                     nextRay = Ray' (intersection + nextDirection ^* epsilon) nextDirection
 
-                     emittance = (iMaterial ^. color) ^* (iMaterial ^. illuminance)
-                     brdf = (iMaterial ^. specularity) / pi * ((nextRay ^. direction) `dot` iNormal)
                      nextRayProb = 1 / (pi * 2)
+                     emittance = (iMaterial ^. color) ^* (iMaterial ^. illuminance)
+                     T2 nextDirection b =
+                       caseof
+                         (iMaterial ^. brdf)
+                         -- Diffuse objects are modeled through Lambartian
+                         -- reflectance. The next ray should be fired somewhere in
+                         -- the hemisphere of the intersected primitives' normal.
+                         [ ( isDiffuse
+                           , let Brdf' _ p = iMaterial ^. brdf
+                                 next = rotate (anglesToQuaternion $ pi *^ rotationVector) iNormal
+                                 brdf' = p / pi * (next `dot` iNormal)
+                              in T2 next brdf')
+                         -- The glossy model uses the Blinn-Phong reflection
+                         -- model.
+                         , ( isGlossy
+                             -- TODO: Find out what the correct way to scale the
+                             --       'rotationVector' is. Right now I've chosen it
+                             --       in such a way that @p = 0@ results in
+                             --       mirror-like behaviour.
+                           , let Brdf' _ p = iMaterial ^. brdf
+                                 intersectionAngle = (ray ^. direction) `dot` iNormal
+                                 reflection = (ray ^. direction) - 2 * intersectionAngle *^ iNormal
+                                 next = rotate (anglesToQuaternion $ (1 - p) *^ rotationVector) reflection
+                                 -- This has to be clamped to 0 as 'next' may be
+                                 -- pointing in to the area behind the intersection
+                                 brdf' = max 0 (next `dot` iNormal)
+                              in T2 next brdf')
+                         ]
+                         (T2 (V3' 0.0 0.0 0.0) 0)
+
+                     nextRay = Ray' (intersection + nextDirection ^* epsilon) nextDirection
                   in T3
                        (T2 nextRay nextSeed)
                        (result + (emittance ^* multiplier))
-                       (multiplier * brdf * nextRayProb)
+                       (multiplier * b * nextRayProb)
 
 closestIntersection :: Scene -> Exp RayF -> Exp (Maybe (Normal, Material))
 closestIntersection scene ray =
