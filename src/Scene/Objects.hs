@@ -72,6 +72,30 @@ data Sphere = Sphere
   , _sphereMaterial :: Material
   } deriving (Prelude.Eq, Show, Typeable, Generic, Elt, IsProduct cst)
 
+-- * Instances
+--
+-- The implementations for 'Elt' and 'IsProduct' are derived through 'Generic'.
+
+instance Lift Exp Camera where
+  type Plain Camera = Camera
+  lift = constant
+
+instance Lift Exp Plane where
+  type Plain Plane = Plane
+  lift = constant
+
+instance Lift Exp Material where
+  type Plain Material = Material
+  lift = constant
+
+instance (Lift Exp a, Elt (Plain a)) => Lift Exp (Ray a) where
+  type Plain (Ray a) = Ray (Plain a)
+  lift (Ray o d) = Exp $ Tuple $ NilTup `SnocTup` lift o `SnocTup` lift d
+
+instance Lift Exp Sphere where
+  type Plain Sphere = Sphere
+  lift = constant
+
 -- * Lenses
 --
 -- Since Sphere, Plane and Light do not have a type parameter we can't make use
@@ -167,27 +191,3 @@ pattern Ray' o d = Pattern (o, d)
 
 pattern Sphere' :: Exp Point -> Exp Float -> Exp Material -> Exp Sphere
 pattern Sphere' p r m = Pattern (p, r, m)
-
--- * Instances
---
--- The implementations for 'Elt' and 'IsProduct' are derived through 'Generic'.
-
-instance Lift Exp Camera where
-  type Plain Camera = Camera
-  lift = constant
-
-instance Lift Exp Plane where
-  type Plain Plane = Plane
-  lift = constant
-
-instance Lift Exp Material where
-  type Plain Material = Material
-  lift = constant
-
-instance (Lift Exp a, Elt (Plain a)) => Lift Exp (Ray a) where
-  type Plain (Ray a) = Ray (Plain a)
-  lift (Ray o d) = Exp $ Tuple $ NilTup `SnocTup` lift o `SnocTup` lift d
-
-instance Lift Exp Sphere where
-  type Plain Sphere = Sphere
-  lift = constant
