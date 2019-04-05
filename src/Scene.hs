@@ -149,7 +149,7 @@ traceRay limit scene primaryRay =
                                  next = rotate (anglesToQuaternion $ (1 - p) *^ rotationVector) reflection
                                  -- This has to be clamped to 0 as 'next' may be
                                  -- pointing in to the area behind the intersection
-                                 brdf' = max 0 (next `dot` iNormal)
+                                 brdf' = max 0 $ p * (next `dot` reflection)
                               in T2 next brdf')
                          ]
                          (T2 (V3' 0.0 0.0 0.0) 0)

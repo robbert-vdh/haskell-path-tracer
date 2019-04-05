@@ -25,7 +25,7 @@ mainScene = Scene (map A.constant spheres') (map A.constant planes')
               Material
                 { _materialColor = V3 0.0 1.0 0.0
                 , _materialIlluminance = 0.0
-                , _materialBrdf = Glossy 0.9
+                , _materialBrdf = Glossy 0.7
                 }
           }
       , Sphere
