@@ -50,11 +50,6 @@ resources for implementing all of this.
 - [Scratchpixel](https://www.scratchapixel.com/) is an amazing resource on all
   things computer graphics. They include detailed explanations of how things
   should work and why they are implemented the way they are.
-- Jacco Bikker's course on [Advanced
-  Graphics](http://www.cs.uu.nl/docs/vakken/magr/2018-2019/index.html#schedule)
-  also contains a lot of easily digestible information on the subject.
-  Especially the lectures on the use of SIMD and GPUs in ray tracing might prove
-  useful when implementing a path tracing algorithm using Accelerate.
 
 ## FAQ
 
