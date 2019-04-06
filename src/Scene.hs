@@ -108,8 +108,6 @@ primaryRays ~(Camera' cPos cRot (fromIntegral -> cFov)) = map transform
 --       I'm not sure if this is the cannonical sollution, but storing the
 --       multiplier (maybe rename that to throughput) as a 'V3 Float' would
 --       solve this issue.
--- TODO: Move the else branch to another local declaration and the whole BRDF
---       calculation to its own function for readability's sake
 -- TODO: Make the emission, BRDF, and next ray direction functions of
 --       'Material'
 -- TODO: Test if there's any performance loss when using 'while' instead of
@@ -117,53 +115,62 @@ primaryRays ~(Camera' cPos cRot (fromIntegral -> cFov)) = map transform
 --       algorithm's bias.
 traceRay :: Exp Int -> Scene -> Exp (RayF, Word32) -> Exp (Color, Word32)
 traceRay limit scene primaryRay =
-  let T3 (T2 _ seed) result _ = iterate limit go (T3 primaryRay (V3' 0 0 0) 1.0)
+  let T3 (T2 _ seed) result _ = iterate limit check (T3 primaryRay (V3' 0 0 0) 1.0)
    in T2 result seed
   where
-    go :: Exp ((RayF, Word32), Color, Float) -> Exp ((RayF, Word32), Color, Float)
-    go (T3 (T2 ray seed) result multiplier) =
+    -- | Check whether the ray has hit something and calculate the prepare the
+    -- next ray if we did.
+    check :: Exp ((RayF, Word32), Color, Float) -> Exp ((RayF, Word32), Color, Float)
+    check current@(T3 (T2 ray seed) result multiplier) =
       let nextHit = closestIntersection scene ray
        in if nearZero multiplier || isNothing nextHit
             then T3 (T2 ray seed) result 0.0
-            else let T2 (Ray' intersection iNormal) iMaterial = fromJust nextHit
-                     T2 rotationVector nextSeed = genVec seed
+            else calculate current $ fromJust nextHit
 
-                     nextRayProb = 1 / (pi * 2)
-                     emittance = (iMaterial ^. color) ^* (iMaterial ^. illuminance)
-                     T2 nextDirection b =
-                       caseof
-                         (iMaterial ^. brdf)
-                         -- Diffuse objects are modeled through Lambartian
-                         -- reflectance. The next ray should be fired somewhere in
-                         -- the hemisphere of the intersected primitives' normal.
-                         [ ( isDiffuse
-                           , let ~(Diffuse' p) = iMaterial ^. brdf
-                                 next = rotate (anglesToQuaternion $ pi *^ rotationVector) iNormal
-                                 brdf' = p / pi * (next `dot` iNormal)
-                              in T2 next brdf')
-                         -- The glossy model uses the Blinn-Phong reflection
-                         -- model.
-                         , ( isGlossy
-                             -- TODO: Find out what the correct way to scale the
-                             --       'rotationVector' is. Right now I've chosen it
-                             --       in such a way that @p = 0@ results in
-                             --       mirror-like behaviour.
-                           , let ~(Glossy' p) = iMaterial ^. brdf
-                                 intersectionAngle = (ray ^. direction) `dot` iNormal
-                                 reflection = (ray ^. direction) - 2 * intersectionAngle *^ iNormal
-                                 next = rotate (anglesToQuaternion $ (1 - p) *^ rotationVector) reflection
-                                 -- This has to be clamped to 0 as 'next' may be
-                                 -- pointing in to the area behind the intersection
-                                 brdf' = max 0 $ p * (next `dot` reflection)
-                              in T2 next brdf')
-                         ]
-                         (T2 (V3' 0.0 0.0 0.0) 0)
+    -- | Calculate the currently accumulated color and throughput as well as the
+    -- next ray after we have intersected with something.
+    calculate ::
+         Exp ((RayF, Word32), Color, Float)
+      -> Exp (Normal, Material)
+      -> Exp ((RayF, Word32), Color, Float)
+    calculate (T3 (T2 ray seed) result multiplier)
+              (T2 ~(Ray' intersection iNormal) iMaterial) =
+      let T2 rotationVector nextSeed = genVec seed
 
-                     nextRay = Ray' (intersection + nextDirection ^* epsilon) nextDirection
-                  in T3
-                       (T2 nextRay nextSeed)
-                       (result + (emittance ^* multiplier))
-                       (multiplier * b * nextRayProb)
+          nextRayProb = 1 / (pi * 2)
+          emittance = (iMaterial ^. color) ^* (iMaterial ^. illuminance)
+          T2 nextDirection brdf' =
+            caseof
+              (iMaterial ^. brdf)
+              -- Diffuse objects are modeled through Lambartian reflectance. The
+              -- next ray should be fired somewhere in the hemisphere of the
+              -- intersected primitives' normal.
+              [ ( isDiffuse
+                , let ~(Diffuse' p) = iMaterial ^. brdf
+                      next = rotate (anglesToQuaternion $ pi *^ rotationVector) iNormal
+                      b = p / pi * (next `dot` iNormal)
+                   in T2 next b)
+              -- The glossy model uses the Blinn-Phong reflection model.
+              , ( isGlossy
+                  -- TODO: Find out what the correct way to scale the
+                  --       'rotationVector' is. Right now I've chosen it in such
+                  --       a way that @p = 0@ results in mirror-like behaviour.
+                , let ~(Glossy' p) = iMaterial ^. brdf
+                      intersectionAngle = (ray ^. direction) `dot` iNormal
+                      reflection = (ray ^. direction) - 2 * intersectionAngle *^ iNormal
+                      next = rotate (anglesToQuaternion $ (1 - p) *^ rotationVector) reflection
+                      -- This has to be clamped to 0 as 'next' may be pointing
+                      -- in to the area behind the intersection
+                      b = max 0 $ p * (next `dot` reflection)
+                   in T2 next b)
+              ]
+              (T2 (V3' 0.0 0.0 0.0) 0)
+
+          nextRay = Ray' (intersection + nextDirection ^* epsilon) nextDirection
+       in T3
+            (T2 nextRay nextSeed)
+            (result + (emittance ^* multiplier))
+            (multiplier * brdf' * nextRayProb)
 
 closestIntersection :: Scene -> Exp RayF -> Exp (Maybe (Normal, Material))
 closestIntersection scene ray =
