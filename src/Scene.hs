@@ -1,5 +1,6 @@
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE RebindableSyntax #-}
+{-# LANGUAGE Strict #-}
 {-# LANGUAGE ViewPatterns #-}
 
 -- | This module contains the main entry point the for the Accelerate program.

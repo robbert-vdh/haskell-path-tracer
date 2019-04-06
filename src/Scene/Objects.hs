@@ -6,6 +6,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE Strict #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -45,19 +46,19 @@ data Camera = Camera
   } deriving (Prelude.Eq, Show, Generic, Elt, IsProduct cst)
 
 data Brdf
-  = Diffuse Float
-  | Glossy Float
+  = Diffuse {-# UNPACK #-} Float
+  | Glossy {-# UNPACK #-} Float
   deriving (Prelude.Eq, Show, Typeable)
 
 data Material = Material
-  { _materialColor :: Color
-  , _materialIlluminance :: Float
-  , _materialBrdf :: Brdf
+  { _materialColor :: {-# UNPACK #-} Color
+  , _materialIlluminance :: {-# UNPACK #-} Float
+  , _materialBrdf :: {-# UNPACK #-} Brdf
   } deriving (Prelude.Eq, Show, Generic, Elt, IsProduct cst)
 
 data Plane = Plane
-  { _planePosition :: Point
-  , _planeDirection :: Direction
+  { _planePosition :: {-# UNPACK #-} Point
+  , _planeDirection :: {-# UNPACK #-} Direction
   , _planeMaterial :: Material
   } deriving (Prelude.Eq, Show, Generic, Elt, IsProduct cst)
 
@@ -72,9 +73,9 @@ data Ray a = Ray
   } deriving (Prelude.Eq, Show, Generic, Elt, IsProduct cst)
 
 data Sphere = Sphere
-  { _spherePosition :: Point
-  , _sphereRadius :: Float
-  , _sphereMaterial :: Material
+  { _spherePosition :: {-# UNPACK #-} Point
+  , _sphereRadius :: {-# UNPACK #-} Float
+  , _sphereMaterial :: {-# UNPACK #-} Material
   } deriving (Prelude.Eq, Show, Generic, Elt, IsProduct cst)
 
 -- * Instances
