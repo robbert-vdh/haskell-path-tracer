@@ -8,6 +8,7 @@ author:
 copyright: 2019 Gijs van Steenpaal, Robert van der Helm
 
 extra-source-files:
+  - app/shaders/**/*
   - README.md
 
 # Metadata used when publishing your package
