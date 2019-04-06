@@ -124,6 +124,8 @@ computationLoop mResult =
       -- but it'll reduce the responsiveness of our application. By doing this
       -- only once we reach a certain threshold we can still make use of this
       -- optimization while keeping it responsive.
+      -- TODO: Cap this on based on frame time to prevent the CPU backend from
+      --       getting unreponsive
       let batchSize = max 30 $ (result ^. iterations) `div` 50
           !(!iterations', !texture') =
             if (result ^. iterations) > 100
