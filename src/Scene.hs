@@ -132,7 +132,7 @@ traceRay limit scene primaryRay =
                          -- reflectance. The next ray should be fired somewhere in
                          -- the hemisphere of the intersected primitives' normal.
                          [ ( isDiffuse
-                           , let Brdf' _ p = iMaterial ^. brdf
+                           , let ~(Diffuse' p) = iMaterial ^. brdf
                                  next = rotate (anglesToQuaternion $ pi *^ rotationVector) iNormal
                                  brdf' = p / pi * (next `dot` iNormal)
                               in T2 next brdf')
@@ -143,7 +143,7 @@ traceRay limit scene primaryRay =
                              --       'rotationVector' is. Right now I've chosen it
                              --       in such a way that @p = 0@ results in
                              --       mirror-like behaviour.
-                           , let Brdf' _ p = iMaterial ^. brdf
+                           , let ~(Glossy' p) = iMaterial ^. brdf
                                  intersectionAngle = (ray ^. direction) `dot` iNormal
                                  reflection = (ray ^. direction) - 2 * intersectionAngle *^ iNormal
                                  next = rotate (anglesToQuaternion $ (1 - p) *^ rotationVector) reflection
