@@ -53,7 +53,7 @@ data Brdf
 data Material = Material
   { _materialColor :: {-# UNPACK #-} Color
   , _materialIlluminance :: {-# UNPACK #-} Float
-  , _materialBrdf :: {-# UNPACK #-} Brdf
+  , _materialBrdf :: Brdf
   } deriving (Prelude.Eq, Show, Generic, Elt, IsProduct cst)
 
 data Plane = Plane
