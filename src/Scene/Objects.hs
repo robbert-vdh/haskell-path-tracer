@@ -39,9 +39,9 @@ data Scene = Scene
 
 data Camera = Camera
   { _cameraPosition :: Point
-  -- | The camer'a rotation expressed in @(roll, pitch, yaw)@ Euler angles.
+  -- | The camera's rotation expressed in @(roll, pitch, yaw)@ Euler angles.
   , _cameraRotation :: Direction
-  -- | The camer'a horizontal field of view in degrees.
+  -- | The camera's horizontal field of view in degrees.
   , _cameraFov :: Int
   } deriving (Prelude.Eq, Show, Generic, Elt, IsProduct cst)
 
