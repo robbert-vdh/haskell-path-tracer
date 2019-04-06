@@ -110,6 +110,11 @@ primaryRays ~(Camera' cPos cRot (fromIntegral -> cFov)) = map transform
 --       solve this issue.
 -- TODO: Move the else branch to another local declaration and the whole BRDF
 --       calculation to its own function for readability's sake
+-- TODO: Make the emission, BRDF, and next ray direction functions of
+--       'Material'
+-- TODO: Test if there's any performance loss when using 'while' instead of
+--       'iterate'. This whould allow us to use russian roulette to reduce the
+--       algorithm's bias.
 traceRay :: Exp Int -> Scene -> Exp (RayF, Word32) -> Exp (Color, Word32)
 traceRay limit scene primaryRay =
   let T3 (T2 _ seed) result _ = iterate limit go (T3 primaryRay (V3' 0 0 0) 1.0)
