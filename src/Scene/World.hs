@@ -23,9 +23,9 @@ mainScene = Scene (map A.constant spheres') (map A.constant planes')
           , _sphereRadius = 5.0
           , _sphereMaterial =
               Material
-                { _materialColor = V3 0.0 1.0 0.0
+                { _materialColor = V3 1.0 0.3 0.3
                 , _materialIlluminance = 0.0
-                , _materialBrdf = Glossy 0.7
+                , _materialBrdf = Diffuse 0.8
                 }
           }
       , Sphere
@@ -39,13 +39,13 @@ mainScene = Scene (map A.constant spheres') (map A.constant planes')
                 }
           }
       , Sphere
-          { _spherePosition = V3 4.5 1.0 (-9.5)
-          , _sphereRadius = 0.3
+          { _spherePosition = V3 4.5 1.0 (-9.0)
+          , _sphereRadius = 0.5
           , _sphereMaterial =
               Material
-                { _materialColor = V3 0.0 0.0 1.0
+                { _materialColor = V3 0.4 0.4 1.0
                 , _materialIlluminance = 0.0
-                , _materialBrdf = Glossy 0.8
+                , _materialBrdf = Glossy 1.0
                 }
           }
       , Sphere
@@ -54,8 +54,18 @@ mainScene = Scene (map A.constant spheres') (map A.constant planes')
           , _sphereMaterial =
               Material
                 { _materialColor = V3 0.8 0.8 0.8
-                , _materialIlluminance = 5420.0
+                , _materialIlluminance = 6942.0
                 , _materialBrdf = Glossy 0.5
+                }
+          }
+      , Sphere
+          { _spherePosition = V3 5.0 10.0 4.0
+          , _sphereRadius = 2.0
+          , _sphereMaterial =
+              Material
+                { _materialColor = V3 0.99 0.84 0.12
+                , _materialIlluminance = 4420.0
+                , _materialBrdf = Diffuse 1.0
                 }
           }
       ]
@@ -65,19 +75,19 @@ mainScene = Scene (map A.constant spheres') (map A.constant planes')
           , _planePosition = V3 0.0 (-3.0) 0.0
           , _planeMaterial =
               Material
-                { _materialColor = V3 0.0 0.0 0.0
+                { _materialColor = V3 0.43 0.95 0.5
                 , _materialIlluminance = 0.0
-                , _materialBrdf = Diffuse 1.0
+                , _materialBrdf = Diffuse 1.5
                 }
           }
       , Plane
-          { _planeDirection = V3 0.0 0.0 (-1.0)
-          , _planePosition = V3 0.0 10.0 6.0
+          { _planeDirection = V3 0.0 (-1.0) 0.0
+          , _planePosition = V3 0.0 15.0 0.0
           , _planeMaterial =
               Material
-                { _materialColor = V3 1.0 1.0 1.0
-                , _materialIlluminance = 20.0
-                , _materialBrdf = Glossy 0.4
+                { _materialColor = V3 0.26 0.68 0.88
+                , _materialIlluminance = 0.0
+                , _materialBrdf = Glossy 0.9
                 }
           }
       ]

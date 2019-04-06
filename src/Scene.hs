@@ -100,45 +100,51 @@ primaryRays ~(Camera' cPos cRot (fromIntegral -> cFov)) = map transform
 --
 -- Because if the way Accelerate is structured, we had to invert the recursive
 -- flow. Instead of returning @emittance + (brdf * traceRay (limit - 1) scene
--- nextRay)@, we return @old_result + (emittance * multiplier)@, where
--- multiplier is a comulative product of the BRDFs.
+-- nextRay)@, we return @old_result + (emittance * throughput)@, where
+-- throughput is a comulative product of the BRDFs, probability density
+-- functions and material colors.
 --
--- TODO: The BRDF should probably take the material of non-illuminating props
---       into account (a red ball should not be able to reflect green light).
---       I'm not sure if this is the cannonical sollution, but storing the
---       multiplier (maybe rename that to throughput) as a 'V3 Float' would
---       solve this issue.
 -- TODO: Make the emission, BRDF, and next ray direction functions of
---       'Material'
+--       'Material'.
 -- TODO: Test if there's any performance loss when using 'while' instead of
 --       'iterate'. This whould allow us to use russian roulette to reduce the
 --       algorithm's bias.
+-- TODO: I feel like some things are normalized when they shouldn't be. Diffuse
+--       spheres look like they have a ring of bright light on them, but I feel
+--       like it stops too abruptly for it to just be diffusion.
 traceRay :: Exp Int -> Scene -> Exp (RayF, Word32) -> Exp (Color, Word32)
 traceRay limit scene primaryRay =
-  let T3 (T2 _ seed) result _ = iterate limit check (T3 primaryRay (V3' 0 0 0) 1.0)
+  let T3 (T2 _ seed) result _ = iterate limit check (T3 primaryRay initialColor initialThroughput)
    in T2 result seed
   where
+    initialColor, initialThroughput :: Exp (V3 Float)
+    initialColor = V3' 0.0 0.0 0.0
+    initialThroughput = V3' 1.0 1.0 1.0
+
     -- | Check whether the ray has hit something and calculate the prepare the
     -- next ray if we did.
-    check :: Exp ((RayF, Word32), Color, Float) -> Exp ((RayF, Word32), Color, Float)
-    check current@(T3 (T2 ray seed) result multiplier) =
+    check ::
+         Exp ((RayF, Word32), Color, V3 Float)
+      -> Exp ((RayF, Word32), Color, V3 Float)
+    check current@(T3 (T2 ray seed) result throughput) =
       let nextHit = closestIntersection scene ray
-       in if nearZero multiplier || isNothing nextHit
-            then T3 (T2 ray seed) result 0.0
+       in if nearZero throughput || isNothing nextHit
+            then T3 (T2 ray seed) result (V3' 0.0 0.0 0.0)
             else calculate current $ fromJust nextHit
 
     -- | Calculate the currently accumulated color and throughput as well as the
     -- next ray after we have intersected with something.
     calculate ::
-         Exp ((RayF, Word32), Color, Float)
+         Exp ((RayF, Word32), Color, V3 Float)
       -> Exp (Normal, Material)
-      -> Exp ((RayF, Word32), Color, Float)
-    calculate (T3 (T2 ray seed) result multiplier)
+      -> Exp ((RayF, Word32), Color, V3 Float)
+    calculate (T3 (T2 ray seed) result throughput)
               (T2 ~(Ray' intersection iNormal) iMaterial) =
       let T2 rotationVector nextSeed = genVec seed
 
           nextRayProb = 1 / (pi * 2)
-          emittance = (iMaterial ^. color) ^* (iMaterial ^. illuminance)
+          mColor = iMaterial ^. color
+          emittance = mColor ^* (iMaterial ^. illuminance)
           T2 nextDirection brdf' =
             caseof
               (iMaterial ^. brdf)
@@ -146,7 +152,7 @@ traceRay limit scene primaryRay =
               -- next ray should be fired somewhere in the hemisphere of the
               -- intersected primitives' normal.
               [ ( isDiffuse
-                , let ~(Diffuse' p) = iMaterial ^. brdf
+                , let Brdf' _ p = iMaterial ^. brdf
                       next = rotate (anglesToQuaternion $ pi *^ rotationVector) iNormal
                       b = p / pi * (next `dot` iNormal)
                    in T2 next b)
@@ -155,7 +161,7 @@ traceRay limit scene primaryRay =
                   -- TODO: Find out what the correct way to scale the
                   --       'rotationVector' is. Right now I've chosen it in such
                   --       a way that @p = 0@ results in mirror-like behaviour.
-                , let ~(Glossy' p) = iMaterial ^. brdf
+                , let Brdf' _ p = iMaterial ^. brdf
                       intersectionAngle = (ray ^. direction) `dot` iNormal
                       reflection = (ray ^. direction) - 2 * intersectionAngle *^ iNormal
                       next = rotate (anglesToQuaternion $ (1 - p) *^ rotationVector) reflection
@@ -169,8 +175,8 @@ traceRay limit scene primaryRay =
           nextRay = Ray' (intersection + nextDirection ^* epsilon) nextDirection
        in T3
             (T2 nextRay nextSeed)
-            (result + (emittance ^* multiplier))
-            (multiplier * brdf' * nextRayProb)
+            (result + (emittance * throughput))
+            (throughput * mColor ^* (brdf' * nextRayProb))
 
 closestIntersection :: Scene -> Exp RayF -> Exp (Maybe (Normal, Material))
 closestIntersection scene ray =
