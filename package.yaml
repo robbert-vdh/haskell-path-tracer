@@ -50,18 +50,21 @@ when:
     else:
       dependencies: [accelerate-llvm-ptx]
 
-library:
-  source-dirs: src
-
-  when:
-    - condition: flag(cpu)
-      cpp-options: -DUSE_CPU_BACKEND
+ghc-options:
+  - -Wall
 
 flags:
   cpu:
     description: "Run the application using Accelerate's CPU backend."
     manual: true
     default: false
+
+library:
+  source-dirs: src
+
+  when:
+    - condition: flag(cpu)
+      cpp-options: -DUSE_CPU_BACKEND
 
 executables:
   tracer-exe:
@@ -72,7 +75,6 @@ executables:
       - -rtsopts
       - -with-rtsopts=-N
       - -O2
-      - -Wall
     dependencies:
       - tracer
 
@@ -84,6 +86,5 @@ tests:
       - -threaded
       - -rtsopts
       - -with-rtsopts=-N
-      - -Wall
     dependencies:
       - tracer
