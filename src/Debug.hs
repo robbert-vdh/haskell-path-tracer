@@ -8,7 +8,7 @@ import Data.List (intercalate)
 import Prelude as P
 
 import Lib (runN)
-import Scene (render)
+import Scene.Trace (render)
 import Scene.World (initialCamera)
 import Util
 

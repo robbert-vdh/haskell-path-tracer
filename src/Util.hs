@@ -22,7 +22,7 @@ import qualified Data.List as P
 import Prelude ((<$>), (<*>), IO)
 import qualified Prelude as P
 
-import Intersection
+import Scene.Intersection
 import Scene.Objects
 
 -- * Functions

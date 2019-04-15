@@ -12,7 +12,7 @@
 -- assume that any common functions that exist in both the prelude and in
 -- Accelerate are lifted to work on Accelerate data structures.
 
-module Scene where
+module Scene.Trace where
 
 import Data.Array.Accelerate
 import Data.Array.Accelerate.Control.Lens hiding (transform)
@@ -22,7 +22,7 @@ import Data.Array.Accelerate.Linear
 
 import qualified Prelude as P ()
 
-import Intersection
+import Scene.Intersection
 import Scene.Objects
 import Scene.World
 import Util

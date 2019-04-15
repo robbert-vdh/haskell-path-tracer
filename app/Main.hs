@@ -47,7 +47,7 @@ import SDL hiding (Point, get, translation)
 import qualified SDL
 
 import Lib
-import Scene
+import Scene.Trace
 import Scene.Objects (Camera, Color, Direction, Point, rotation')
 import Scene.World (initialCamera)
 import TH

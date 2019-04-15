@@ -5,7 +5,7 @@
 
 -- | This module defines a common interface for doing calculations on
 -- primitives.
-module Intersection where
+module Scene.Intersection where
 
 import Data.Array.Accelerate
 import Data.Array.Accelerate.Control.Lens
