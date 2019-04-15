@@ -4,8 +4,10 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE ViewPatterns #-}
 
@@ -44,6 +46,7 @@ import qualified Graphics.GLUtil as GLU
 import qualified Graphics.Rendering.OpenGL as GL
 import Linear (V2)
 import SDL hiding (Point, get, translation)
+import qualified SDL.Font as Font
 import qualified SDL
 
 import Lib
@@ -72,18 +75,29 @@ data Result = Result
 
 makeFields ''Result
 
+-- | Texture units IDs that the rendering texture and any rendered text should
+-- get bound to.
+resultTexUnit, textTexUnit :: GL.GLuint
+resultTexUnit = 0
+textTexUnit = 1
+
 main :: IO ()
 main = do
   initializeAll
+  Font.initialize
 
   window <-
-    createWindow (T.pack "Leipe Mocro Tracer") $
+    createWindow "Leipe Mocro Tracer" $
     defaultWindow
       -- We'll only grab the mouse input when the right button is pressed
       { windowInputGrabbed = False
       , windowInitialSize = V2 (CInt screenWidth) (CInt screenHeight)
       , windowOpenGL = Just defaultOpenGL {glProfile = Core Normal 3 3}
       }
+  -- TODO: This doesn't work even though it should be working
+  -- font <- Font.decode $(readFileBsQ "app/assets/OpenSans-Regular.ttf") 20
+  font <- Font.load "app/assets/OpenSans-Regular.ttf" 28
+  Font.setHinting font Font.Light
 
   let compute' = compileFor $ scalar initialCamera
   seeds <- initialOutput
@@ -97,7 +111,7 @@ main = do
       }
 
   computationThreadId <- forkOS $ computationLoop mResult
-  graphicsThreadId <- forkOS $ graphicsLoop window mResult
+  graphicsThreadId <- forkOS $ graphicsLoop window font mResult
   inputLoop mResult
 
   killThread graphicsThreadId
@@ -134,7 +148,6 @@ computationLoop mResult =
           !result' = result & texture .~ texture' & iterations +~ iterations'
 
       void $! putMVar mResult $! result'
-      print $ result' ^. iterations
 
       return $! result
 
@@ -243,13 +256,14 @@ inputLoop mResult = go
       unless shouldQuit go
 
 -- | Render the texture created by Accelerate using OpenGL.
-graphicsLoop :: Window -> MVar Result -> IO ()
-graphicsLoop window mResult = do
+graphicsLoop :: Window -> Font.Font -> MVar Result -> IO ()
+graphicsLoop window font mResult = do
   void $ glCreateContext window
   (program, vao) <- initResources
 
   forever $ do
     V2 width height <- SDL.get $ windowSize window
+    let textureSize = GL.TextureSize2D screenWidth screenHeight
     GL.viewport $=
       (GL.Position 0 0, GL.Size (fromIntegral width) (fromIntegral height))
 
@@ -262,10 +276,33 @@ graphicsLoop window mResult = do
     GL.clearColor $= GL.Color4 0.5 0.5 0.5 1.0
     GL.clear [GL.ColorBuffer]
 
+    -- We'll render the number of iterations (and any other text) to an SDL
+    -- surface, which we can then transfer to a GPU buffer.
+    textSurface <- createRGBSurface (V2 width height) RGBA8888
+    iterationSurface <-
+      Font.blended
+        font
+        (V4 255 255 255 255)
+        (T.pack $ show $ result ^. iterations)
+    void $! surfaceBlit iterationSurface Nothing textSurface (Just (P $ V2 10 0))
+
+    GL.activeTexture $= GL.TextureUnit textTexUnit
+    lockSurface textSurface
+    textPixels <- surfacePixels textSurface
+    GL.texImage2D
+      GL.Texture2D
+      GL.NoProxy
+      0
+      GL.RGBA'
+      textureSize
+      0
+      (GL.PixelData GL.RGBA GL.UnsignedByte textPixels)
+
     -- We have to transform our @[V3 Float]@ into a format the OpenGL pixel
     -- transfer knows how to deal with. We could use a combination of
     -- 'concatMap' and 'GLU.withPixels' here, but that takes almost 200
     -- miliseconds combined.
+    GL.activeTexture $= GL.TextureUnit resultTexUnit
     unsafeWith pixelBuffer $ \p ->
       GL.texImage2D
         GL.Texture2D
@@ -275,13 +312,19 @@ graphicsLoop window mResult = do
         -- values if we use the 'GL.RGB'' internal representation instead. Not
         -- like we've done this or anything.
         GL.RGB32F
-        (GL.TextureSize2D screenWidth screenHeight)
+        textureSize
         0
         (GL.PixelData GL.RGB GL.Float p)
 
+    -- This GLint version is **very** important. The Haskell bindings will
+    -- hapilly accept a uint here, but OpenGL expects the texture units to be
+    -- signed integers. Passing an insigned integer here results in the wrong
+    -- texture being loaded. Normally this is not an issue, but the Haskell
+    -- bindings use 'Word32' values instead of enums for 'GL.activeTexture'.
+    GLU.setUniform program "u_texture" (fromIntegral resultTexUnit :: GL.GLint)
+    GLU.setUniform program "u_text" (fromIntegral textTexUnit :: GL.GLint)
     GLU.setUniform program "u_iterations"
       (fromIntegral (result ^. iterations) :: GL.GLint)
-    GLU.setUniform program "u_texture" (0 :: GL.GLint)
 
     GL.bindVertexArrayObject $= Just vao
     GL.drawArrays GL.Triangles 0 6
@@ -310,8 +353,13 @@ initResources = do
 
   -- We have to make sure the maximum number of mipmaps is set to zero,
   -- otherwise the texture will be incomplete and not render at all
-  GL.activeTexture $= GL.TextureUnit 0
-  GL.textureBinding GL.Texture2D $= Just (GL.TextureObject 0)
+  [resultTex, textTex] <- GL.genObjectNames @GL.TextureObject 2
+  GL.activeTexture $= GL.TextureUnit resultTexUnit
+  GL.textureBinding GL.Texture2D $= Just resultTex
+  GL.textureLevelRange GL.Texture2D $= (0, 0)
+
+  GL.activeTexture $= GL.TextureUnit textTexUnit
+  GL.textureBinding GL.Texture2D $= Just textTex
   GL.textureLevelRange GL.Texture2D $= (0, 0)
 
   return (program', vao')
