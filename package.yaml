@@ -8,7 +8,7 @@ author:
 copyright: 2019 Gijs van Steenpaal, Robert van der Helm
 
 extra-source-files:
-  - app/shaders/**/*
+  - app/assets/**/*
   - README.md
 
 # Metadata used when publishing your package
@@ -39,6 +39,7 @@ dependencies:
   - GLUtil
   - OpenGL
   - sdl2
+  - sdl2-ttf
 
 # We don't need to compile the Accelerate backend we're not using. If we don't
 # do this, you won't be able to compile the CPU version without having CUDA

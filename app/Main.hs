@@ -295,8 +295,8 @@ initResources = do
   GL.blendFunc $= (GL.SrcAlpha, GL.OneMinusSrcAlpha)
 
   program' <- GLU.simpleShaderProgramBS
-    $(readShaderQ "app/shaders/vs.glsl")
-    $(readShaderQ "app/shaders/fs.glsl")
+    $(readFileBsQ "app/assets/vs.glsl")
+    $(readFileBsQ "app/assets/fs.glsl")
 
   let vertexAttrib = GLU.getAttrib program' "v_pos"
   vao' <- GLU.makeVAO $ do
