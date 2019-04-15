@@ -3,6 +3,8 @@
 -- | Template Haskell macros for importing shaders.
 module TH where
 
+import Control.DeepSeq (force)
+import Control.Exception (evaluate)
 import qualified Data.ByteString.Char8 as BS
 import Language.Haskell.TH
 import System.IO
@@ -14,7 +16,8 @@ import System.IO
 readFileBsQ :: FilePath -> Q Exp
 readFileBsQ fp = [|BS.pack $(LitE . StringL <$> runIO (readBytes fp))|]
   where
-    readBytes f = do
-      handle <- openFile f ReadMode
-      hSetEncoding handle latin1
-      hGetContents handle
+    readBytes f =
+      withFile
+        f
+        ReadMode
+        (\h -> hSetEncoding h latin1 >> hGetContents h >>= evaluate . force)

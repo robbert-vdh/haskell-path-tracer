@@ -25,6 +25,7 @@ dependencies:
   - accelerate
   - accelerate-io-vector
   - bytestring
+  - deepseq
   - lens
   - lens-accelerate
   - linear
