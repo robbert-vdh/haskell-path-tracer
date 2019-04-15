@@ -133,10 +133,10 @@ computationLoop mResult =
               else (1, (result ^. compute) $! (result ^. texture))
           !result' = result & texture .~ texture' & iterations +~ iterations'
 
-      void $ putMVar mResult $! result'
+      void $! putMVar mResult $! result'
       print $ result' ^. iterations
 
-      return result
+      return $! result
 
     -- The RNGs should be reseeded every 2000 iterations to prevent convergence
     -- TODO: Refactor out this double read/swap and any data races
@@ -145,7 +145,7 @@ computationLoop mResult =
       then do
         liftIO $ do
           reseeded <- reseed $ result ^. texture
-          void $ swapMVar mResult $ result & texture .~ reseeded
+          void $! swapMVar mResult $! result & texture .~ reseeded
         modify (+ reseedInterval)
       else when ((result ^. iterations) < reseedInterval) $ put reseedInterval
   where
@@ -185,7 +185,7 @@ inputLoop mResult = go
       -- Camera movement
       -- We use the 'State' monad to accumulate camera movements before processing
       -- them to prevent unneeded camera updates.
-      deltas@(translation, rotation) <- flip execStateT initialDeltas $ do
+      deltas@(!translation, !rotation) <- flip execStateT initialDeltas $ do
         forM_ events
           (\case
             -- The right mouse button enables mouse look. SDL's relative mouse
@@ -238,7 +238,7 @@ inputLoop mResult = go
             result' = result & iterations .~ 1 & texture .~ emptyOutput
                             & camera .~ updatedCamera & compute .~ compute'
 
-        putMVar mResult result'
+        putMVar mResult $! result'
 
       unless shouldQuit go
 
