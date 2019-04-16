@@ -41,6 +41,10 @@ dependencies:
   - sdl2
   - sdl2-ttf
 
+  # Used to create temporary file as a workaround for sdl2-ttf's decode function
+  # not working properly
+  - temporary
+
 # We don't need to compile the Accelerate backend we're not using. If we don't
 # do this, you won't be able to compile the CPU version without having CUDA
 # installed.

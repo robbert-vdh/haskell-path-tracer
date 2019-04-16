@@ -36,6 +36,8 @@ import Control.Monad.IO.Class
 import Control.Monad.Trans.State.Strict
 import qualified Data.Array.Accelerate as A
 import qualified Data.Array.Accelerate.IO.Data.Vector.Storable as A
+import Data.ByteString.Char8 (ByteString)
+import qualified Data.ByteString.Char8 as BS
 import Data.Int (Int32)
 import qualified Data.Text as T
 import qualified Data.Vector.Storable as V
@@ -48,6 +50,8 @@ import Linear (V2)
 import SDL hiding (Point, get, translation)
 import qualified SDL.Font as Font
 import qualified SDL
+import System.IO
+import System.IO.Temp
 
 import Lib
 import Scene.Trace
@@ -94,10 +98,6 @@ main = do
       , windowInitialSize = V2 (CInt screenWidth) (CInt screenHeight)
       , windowOpenGL = Just defaultOpenGL {glProfile = Core Normal 3 3}
       }
-  -- TODO: This doesn't work even though it should be working
-  -- font <- Font.decode $(readFileBsQ "app/assets/OpenSans-Regular.ttf") 20
-  font <- Font.load "app/assets/OpenSans-Regular.ttf" 28
-  Font.setHinting font Font.Light
 
   let compute' = compileFor $ scalar initialCamera
   seeds <- initialOutput
@@ -111,7 +111,7 @@ main = do
       }
 
   computationThreadId <- forkOS $ computationLoop mResult
-  graphicsThreadId <- forkOS $ graphicsLoop window font mResult
+  graphicsThreadId <- forkOS $ graphicsLoop window mResult
   inputLoop mResult
 
   killThread graphicsThreadId
@@ -256,8 +256,14 @@ inputLoop mResult = go
       unless shouldQuit go
 
 -- | Render the texture created by Accelerate using OpenGL.
-graphicsLoop :: Window -> Font.Font -> MVar Result -> IO ()
-graphicsLoop window font mResult = do
+graphicsLoop :: Window -> MVar Result -> IO ()
+graphicsLoop window mResult = do
+  -- 'Font.decode' should be able to load the font from am bytestring, but the
+  -- bindings seem to be broken
+  font <- loadFont "open-sans.ttf"
+    $(readFileBsQ "app/assets/OpenSans-Regular.ttf") 28
+  Font.setHinting font Font.Light
+
   void $ glCreateContext window
   (program, vao) <- initResources
 
@@ -381,3 +387,13 @@ screenQuad =
 -- representation that can be used for camera rotation.
 adjustSensitivity :: Int32 -> Float
 adjustSensitivity n = fromIntegral n * (-0.001)
+
+-- | Load a font from a bytestring. This is a workaround for 'SDL.Font.decode'
+-- not loading the font properly. Instead of reading directly from memory we'll
+-- simply write the font to disk and let sdl2_ttf read from there.
+loadFont :: String -> ByteString -> Font.PointSize -> IO Font.Font
+loadFont name bs size =
+  withSystemTempFile name $ \path handle -> do
+    hSetEncoding handle latin1
+    BS.hPut handle bs
+    Font.load path size
