@@ -396,4 +396,5 @@ loadFont name bs size =
   withSystemTempFile name $ \path handle -> do
     hSetEncoding handle latin1
     BS.hPut handle bs
+
     Font.load path size
