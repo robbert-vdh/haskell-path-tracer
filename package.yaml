@@ -8,7 +8,6 @@ author:
 copyright: 2019 Gijs van Steenpaal, Robert van der Helm
 
 extra-source-files:
-  - app/assets/**/*
   - README.md
 
 # Metadata used when publishing your package

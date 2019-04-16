@@ -7,6 +7,7 @@ import Control.DeepSeq (force)
 import Control.Exception (evaluate)
 import qualified Data.ByteString.Char8 as BS
 import Language.Haskell.TH
+import Language.Haskell.TH.Syntax (addDependentFile)
 import System.IO
 
 -- | Read a file at compile time as a 'ByteString'. 'readFile' can't read our
@@ -14,7 +15,8 @@ import System.IO
 -- 'latin1' encoding will cause errors to be thrown when encountering codepoints
 -- above the first 256 unicode characters, but this is probably for the best.
 readFileBsQ :: FilePath -> Q Exp
-readFileBsQ fp = [|BS.pack $(LitE . StringL <$> runIO (readBytes fp))|]
+readFileBsQ fp =
+  addDependentFile fp >> [|BS.pack $(LitE . StringL <$> runIO (readBytes fp))|]
   where
     readBytes f =
       withFile
