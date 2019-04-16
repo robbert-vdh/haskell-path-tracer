@@ -26,7 +26,29 @@ stack build --flag tracer:cpu --exec tracer-exe
 
 Otherwise simply use `stack run` to compile and run the application.
 
-## Library Documentation
+## Native dependencies
+
+Because of the reliance on LLVM, OpenGL and SDL there are a few non-Haskell
+dependencies. These can be installed as follows:
+
+### Debian, Ubuntu and derivatives
+
+Debian and Ubuntu ship older versions of LLVM than those supported by this
+project so it might be necessary to install LLVM's from their own
+[repositories](https://apt.llvm.org/).
+
+```shell
+sudo apt update
+sudo apt install libsdl2-dev libsdl2-ttf-dev llvm-7-dev
+```
+
+### Arch, Manjaro and derivatives
+
+```shell
+sudo pacman -S sdl2 sdl2_ttf llvm-libs
+```
+
+## Library documentation
 
 The application depends on an unreleased version of Accelerate. Therefore it
 might be useful to generate the documentation locally instead of using the
