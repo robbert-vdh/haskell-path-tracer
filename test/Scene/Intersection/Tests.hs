@@ -34,7 +34,8 @@ sphereTests =
         evalExp hitPos === V3 0.0 0.0 diameter
     ]
 
--- |
+-- | Evaluate a single Accelerate expression to a value. This is needed because
+-- we can't compare unevaluated expressions directly.
 evalExp :: Elt a => Exp a -> a
 evalExp e = head $ A.toList $ run (unit e)
 
