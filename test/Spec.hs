@@ -1,2 +1,6 @@
+import Test.Tasty
+
+import qualified Scene.Intersection.Tests
+
 main :: IO ()
-main = putStrLn "Test suite not yet implemented"
+main = defaultMain $ testGroup "tests" [Scene.Intersection.Tests.tests]

@@ -72,9 +72,3 @@ resources for implementing all of this.
 - [Scratchpixel](https://www.scratchapixel.com/) is an amazing resource on all
   things computer graphics. They include detailed explanations of how things
   should work and why they are implemented the way they are.
-
-## FAQ
-
-### Why are there no tests?
-
-Good question!

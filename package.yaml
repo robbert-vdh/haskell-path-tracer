@@ -93,3 +93,7 @@ tests:
       - -with-rtsopts=-N
     dependencies:
       - tracer
+
+      - hedgehog
+      - tasty
+      - tasty-hedgehog
