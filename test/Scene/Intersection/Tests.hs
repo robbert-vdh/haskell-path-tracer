@@ -93,8 +93,8 @@ planeTests =
         evalExp (distanceTo ray plane) === Nothing
     , testProperty "Continious Angles" $
       property $ do
-        x <- forAll $ Gen.float (Range.linearFrac (-0.96) 0.96)
-        y <- forAll $ Gen.float (Range.linearFrac (-0.96) 0.96)
+        x <- forAll $ Gen.float (Range.linearFrac (-0.99) 0.99)
+        y <- forAll $ Gen.float (Range.linearFrac (-0.99) 0.99)
         let dir = constant (V3 x y 1.0)
             ray = Ray' (V3' 0.0 0.0 0.0) dir
             plane = makePlane (V3 0.0 0.0 1.0) (V3 0.0 0.0 (-1.0))
@@ -104,8 +104,8 @@ planeTests =
         evalExp (distanceTo ray plane) /== Nothing
     , testProperty "Backface culling Angles" $
       property $ do
-        x <- forAll $ Gen.float (Range.linearFrac (-0.96) 0.96)
-        y <- forAll $ Gen.float (Range.linearFrac (-0.96) 0.96)
+        x <- forAll $ Gen.float (Range.linearFrac (-0.99) 0.99)
+        y <- forAll $ Gen.float (Range.linearFrac (-0.99) 0.99)
         let dir = constant (V3 x y 1.0)
             ray = Ray' (V3' 0.0 0.0 0.0) dir
             plane = makePlane (V3 0.0 0.0 1.0) (V3 0.0 0.0 1.0)
