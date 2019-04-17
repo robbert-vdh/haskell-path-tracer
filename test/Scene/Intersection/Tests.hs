@@ -18,7 +18,7 @@ import Scene.Intersection
 import Scene.Objects
 
 tests :: TestTree
-tests = testGroup "Scene.Intersection" [sphereTests]
+tests = testGroup "Scene.Intersection" [sphereTests, planeTests]
 
 sphereTests :: TestTree
 sphereTests =
@@ -46,7 +46,7 @@ sphereTests =
         -- we'll just round the results and asusme they are equal
         (roundTo 2 <$> evalExp distance) ===
           Just
-            (roundTo 3 $
+            (roundTo 2 $
               sqrt (3 * (diameter ** 2)) - diameter +
               sqrt (3 * (offset ** 2)))
     , testProperty "backface culling" $
@@ -62,7 +62,58 @@ sphereTests =
         evalExp (distanceTo ray sphere) === Nothing
     ]
 
--- | Evaluate a single Accelerate expression to a value. This is needed because
+planeTests :: TestTree
+planeTests = 
+  testGroup
+    "Plane"
+    [
+      testProperty "Continious Straight on" $
+      property $ do
+        x <- forAll $ Gen.int (Range.linearBounded :: Range Int)
+        y <- forAll $ Gen.int (Range.linearBounded :: Range Int)
+        z <- forAll $ Gen.float (Range.linearFrac 1.0 1000.0)
+        let pos = V3 (fromIntegral x) (fromIntegral y) z
+            nor = V3 0.0 0.0 (-1.0)
+            plane = makePlane pos nor
+            ray = Ray' (V3' 0.0 0.0 0.0) (V3' 0.0 0.0 1.0)
+
+        -- Check if there was a hit
+        evalExp (distanceTo ray plane) === Just z
+    , testProperty "Backface culling Straight on" $
+      property $ do
+        x <- forAll $ Gen.int (Range.linearBounded :: Range Int)
+        y <- forAll $ Gen.int (Range.linearBounded :: Range Int)
+        z <- forAll $ Gen.float (Range.linearFrac 1.0 1000.0)
+        let pos = V3 (fromIntegral x) (fromIntegral y) z
+            nor = V3 0.0 0.0 1.0
+            plane = makePlane pos nor
+            ray = Ray' (V3' 0.0 0.0 0.0) (V3' 0.0 0.0 1.0)
+
+        -- Check if there was a hit
+        evalExp (distanceTo ray plane) === Nothing
+    , testProperty "Continious Angles" $
+      property $ do
+        x <- forAll $ Gen.float (Range.linearFrac (-0.96) 0.96)
+        y <- forAll $ Gen.float (Range.linearFrac (-0.96) 0.96)
+        let dir = constant (V3 x y 1.0)
+            ray = Ray' (V3' 0.0 0.0 0.0) dir
+            plane = makePlane (V3 0.0 0.0 1.0) (V3 0.0 0.0 (-1.0))
+
+        -- TODO: get angle the ray is at, use pythagoras to find distance.
+        -- replace this asser with something more usefull
+        evalExp (distanceTo ray plane) /== Nothing
+    , testProperty "Backface culling Angles" $
+      property $ do
+        x <- forAll $ Gen.float (Range.linearFrac (-0.96) 0.96)
+        y <- forAll $ Gen.float (Range.linearFrac (-0.96) 0.96)
+        let dir = constant (V3 x y 1.0)
+            ray = Ray' (V3' 0.0 0.0 0.0) dir
+            plane = makePlane (V3 0.0 0.0 1.0) (V3 0.0 0.0 1.0)
+
+        evalExp (distanceTo ray plane) === Nothing
+    ]
+
+    -- | Evaluate a single Accelerate expression to a value. This is needed because
 -- we can't compare unevaluated expressions directly.
 evalExp :: Elt a => Exp a -> a
 evalExp e = head $ A.toList $ run (unit e)
@@ -73,13 +124,27 @@ makeSphere pos diameter =
   Sphere
     { _spherePosition = pos
     , _sphereRadius = diameter
-    , _sphereMaterial =
-        Material
-          { _materialColor = V3 1.0 1.0 1.0
-          , _materialIlluminance = 1.0
-          , _materialBrdf = Diffuse 1.0
-          }
+    , _sphereMaterial = dummyMaterial
     }
+
+-- | Generate a dummy plane by its pos and normal
+makePlane :: V3 Float -> V3 Float -> Exp Plane
+makePlane pos nor =
+  constant $
+  Plane
+    { _planeDirection = nor
+    , _planePosition = pos
+    , _planeMaterial = dummyMaterial
+    }
+
+-- | Get a dummy material to use usefull as placeholder.
+dummyMaterial :: Material
+dummyMaterial = Material
+  { _materialColor = V3 1.0 1.0 1.0
+  , _materialIlluminance = 1.0
+  , _materialBrdf = Diffuse 1.0
+  }
+
 
 -- | Round a number to a certain number of places. Uesful in comparisons.
 roundTo :: Int -> Float -> Float
