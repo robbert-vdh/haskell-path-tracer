@@ -3,7 +3,7 @@ module Scene.Intersection.Tests
   ) where
 
 import qualified Data.Array.Accelerate as A
-import Data.Array.Accelerate (constant, unit, Elt, Exp)
+import Data.Array.Accelerate (Elt, Exp, constant, unit)
 import Data.Array.Accelerate.Data.Maybe
 import Data.Array.Accelerate.Linear hiding (distance)
 import Hedgehog
@@ -11,7 +11,6 @@ import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 import Test.Tasty
 import Test.Tasty.Hedgehog
-import qualified Linear as L
 
 import Lib (run)
 import Scene.Intersection
@@ -63,7 +62,7 @@ sphereTests =
     ]
 
 planeTests :: TestTree
-planeTests = 
+planeTests =
   testGroup
     "Plane"
     [
@@ -113,7 +112,7 @@ planeTests =
         evalExp (distanceTo ray plane) === Nothing
     ]
 
-    -- | Evaluate a single Accelerate expression to a value. This is needed because
+-- | Evaluate a single Accelerate expression to a value. This is needed because
 -- we can't compare unevaluated expressions directly.
 evalExp :: Elt a => Exp a -> a
 evalExp e = head $ A.toList $ run (unit e)
@@ -144,7 +143,6 @@ dummyMaterial = Material
   , _materialIlluminance = 1.0
   , _materialBrdf = Diffuse 1.0
   }
-
 
 -- | Round a number to a certain number of places. Uesful in comparisons.
 roundTo :: Int -> Float -> Float
