@@ -114,6 +114,15 @@ main = do
       , _resultCamera = initialCamera
       }
 
+  putStrLn ""
+  putStrLn "          Camera Controls"
+  putStrLn "  -------------------------------"
+  putStrLn "      W     [Shift] Sprint"
+  putStrLn "    A   D   [Space] Move up"
+  putStrLn "      S     [Ctrl] Move down"
+  putStrLn "            [RMB + drag] Rotate"
+  putStrLn ""
+
   computationThreadId <- forkOS $ computationLoop mResult
   graphicsThreadId <- forkOS $ graphicsLoop window mResult
   inputLoop mResult
@@ -236,8 +245,6 @@ inputLoop mResult = time >>= go
               modify $ \(t, r) -> (t, r + V3 dy dx 0.0)
             _ -> return ())
 
-        -- TODO: Either print or overlay the keybindings (including Shift) when
-        --       the application start
         when (keyDown ScancodeW) $
           modify $ \(t, r) -> (t + V3 0.0 0.0 (-1.0), r)
         when (keyDown ScancodeS) $
