@@ -85,6 +85,10 @@ resultTexUnit, textTexUnit :: GL.GLuint
 resultTexUnit = 0
 textTexUnit = 1
 
+-- | The (Euclidean) distance the camera should be able to move in one seconds.
+movementSpeed :: Float
+movementSpeed = 3.0
+
 main :: IO ()
 main = do
   initializeAll
@@ -176,7 +180,7 @@ computationLoop mResult =
 -- gets moved. This should be run in the main thread, since quitting the
 -- application will end this action.
 inputLoop :: MVar Result -> IO ()
-inputLoop mResult = go
+inputLoop mResult = time >>= go
   where
     initialDeltas :: (Point, Direction)
     initialDeltas = (V3 0.0 0.0 0.0, V3 0.0 0.0 0.0)
@@ -190,18 +194,26 @@ inputLoop mResult = go
         minRoll = negate pi / 2 + 0.001
         maxRoll = pi / 2 - 0.001
 
-    go = do
+    go :: Float -> IO ()
+    go lastFrame = do
       events <- map eventPayload <$> pollEvents
 
+      currentFrame <- time
       keyDown <- getKeyboardState
       allowMouseMovement <- (==) RelativeLocation <$> getMouseLocationMode
-      let shouldQuit =
+      let elapsed = currentFrame - lastFrame
+          movementDistance =
+            movementSpeed * elapsed *
+            if keyDown ScancodeLShift
+              then 1
+              else 0.25
+          shouldQuit =
             QuitEvent `elem` events || keyDown ScancodeQ || keyDown ScancodeEscape
 
       -- Camera movement
       -- We use the 'State' monad to accumulate camera movements before processing
       -- them to prevent unneeded camera updates.
-      deltas@(!translation, !rotation) <- flip execStateT initialDeltas $ do
+      !deltas <- flip execStateT initialDeltas $ do
         forM_ events
           (\case
             -- The right mouse button enables mouse look. SDL's relative mouse
@@ -224,22 +236,20 @@ inputLoop mResult = go
               modify $ \(t, r) -> (t, r + V3 dy dx 0.0)
             _ -> return ())
 
-        -- TODO: Make the distance relative to the elapsed time
-        -- TODO: Either print or overlay the keybindings when the application
-        --       start
-        let movementSpeed = if keyDown ScancodeLShift then 0.2 else 0.05
+        -- TODO: Either print or overlay the keybindings (including Shift) when
+        --       the application start
         when (keyDown ScancodeW) $
-          modify $ \(t, r) -> (t + V3 0.0 0.0 (negate movementSpeed), r)
+          modify $ \(t, r) -> (t + V3 0.0 0.0 (-1.0), r)
         when (keyDown ScancodeS) $
-          modify $ \(t, r) -> (t + V3 0.0 0.0 movementSpeed, r)
+          modify $ \(t, r) -> (t + V3 0.0 0.0 1.0, r)
         when (keyDown ScancodeA) $
-          modify $ \(t, r) -> (t + V3 (negate movementSpeed) 0.0 0.0, r)
+          modify $ \(t, r) -> (t + V3 (-1.0) 0.0 0.0, r)
         when (keyDown ScancodeD) $
-          modify $ \(t, r) -> (t + V3 movementSpeed 0.0 0.0, r)
+          modify $ \(t, r) -> (t + V3 1.0 0.0 0.0, r)
         when (keyDown ScancodeLCtrl) $
-          modify $ \(t, r) -> (t + V3 0.0 (negate movementSpeed) 0.0, r)
+          modify $ \(t, r) -> (t + V3 0.0 (-1.0) 0.0, r)
         when (keyDown ScancodeSpace) $
-          modify $ \(t, r) -> (t + V3 0.0 movementSpeed 0.0, r)
+          modify $ \(t, r) -> (t + V3 0.0 1.0 0.0, r)
 
       -- We should update the camera only when we receive user input. If the
       -- camera does get moved, we should reset the current result.
@@ -247,16 +257,21 @@ inputLoop mResult = go
         emptyOutput <- initialOutput
         result <- takeMVar mResult
 
-        let updatedCamera = result ^. camera & rotation' +~ rotation
-                                            & rotation' %~ clampRoll
-                                            & translate translation
+        -- The distance the camera moves depends on the time elapsed since the
+        -- last frame and whether the shift key is being held down. We'll
+        -- normalize the distance here so that strafing while moving forward
+        -- moves you the same distance as moving in only one direction would.
+        let (\v -> normalize v ^* movementDistance -> translation, rotation) = deltas
+            updatedCamera = result ^. camera & rotation' +~ rotation
+                                             & rotation' %~ clampRoll
+                                             & translate translation
             compute' = compileFor $ scalar updatedCamera
             result' = result & iterations .~ 1 & texture .~ emptyOutput
-                            & camera .~ updatedCamera & compute .~ compute'
+                             & camera .~ updatedCamera & compute .~ compute'
 
         putMVar mResult $! result'
 
-      unless shouldQuit go
+      unless shouldQuit $ go currentFrame
 
 -- | Render the texture created by Accelerate using OpenGL.
 graphicsLoop :: Window -> MVar Result -> IO ()
