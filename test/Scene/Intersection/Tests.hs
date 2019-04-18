@@ -64,7 +64,7 @@ sphereTests =
       property $ do
         rayDirection <- forAll $ L.normalize <$> v3 (Range.linearFrac (-1.0) 1.0)
         let ray = Ray' (V3' 0.0 0.0 0.0) (constant rayDirection)
-            sphere = makeSphere (negate rayDirection) (0.1)
+            sphere = makeSphere (negate rayDirection) 0.1
 
         evalExp (distanceTo ray sphere) === Nothing
     ]
@@ -100,9 +100,9 @@ planeTests =
         evalExp (distanceTo ray plane) === Nothing
     , testProperty "Continious Angles" $
       property $ do
-        x <- forAll $ Gen.float (Range.linearFrac (-0.99) 0.99)
-        y <- forAll $ Gen.float (Range.linearFrac (-0.99) 0.99)
-        let dir = constant (V3 x y 1.0)
+        x <- forAll $ Gen.float (Range.linearFrac (-1000.0) 1000.0)
+        y <- forAll $ Gen.float (Range.linearFrac (-1000.0) 1000.0)
+        let dir = constant $ L.normalize (V3 x y 1.0)
             ray = Ray' (V3' 0.0 0.0 0.0) dir
             plane = makePlane (V3 0.0 0.0 1.0) (V3 0.0 0.0 (-1.0))
 
@@ -111,9 +111,9 @@ planeTests =
         evalExp (distanceTo ray plane) /== Nothing
     , testProperty "Backface culling Angles" $
       property $ do
-        x <- forAll $ Gen.float (Range.linearFrac (-0.99) 0.99)
-        y <- forAll $ Gen.float (Range.linearFrac (-0.99) 0.99)
-        let dir = constant (V3 x y 1.0)
+        x <- forAll $ Gen.float (Range.linearFrac (-1000.0) 1000.0)
+        y <- forAll $ Gen.float (Range.linearFrac (-1000.0) 1000.0)
+        let dir = constant $ L.normalize (V3 x y 1.0)
             ray = Ray' (V3' 0.0 0.0 0.0) dir
             plane = makePlane (V3 0.0 0.0 1.0) (V3 0.0 0.0 1.0)
 
