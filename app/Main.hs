@@ -116,7 +116,7 @@ main = do
 
   putStrLn ""
   putStrLn "          Camera Controls"
-  putStrLn "  -------------------------------"
+  putStrLn "  ───────────────────────────────"
   putStrLn "      W     [Shift] Sprint"
   putStrLn "    A   D   [Space] Move up"
   putStrLn "      S     [Ctrl] Move down"
