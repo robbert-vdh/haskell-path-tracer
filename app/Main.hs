@@ -131,7 +131,7 @@ compileFor = runN render screenPixels
 computationLoop :: MVar Result -> IO ()
 computationLoop mResult =
   flip evalStateT reseedInterval $ forever $ do
-    result <- liftIO $ do
+    currentIterations <- liftIO $ do
       result <- takeMVar mResult
 
       -- We can gain some performance by calculating multiple samples at once,
@@ -148,19 +148,22 @@ computationLoop mResult =
           !result' = result & texture .~ texture' & iterations +~ iterations'
 
       void $! putMVar mResult $! result'
-
-      return $! result
+      return $! result' ^. iterations
 
     -- The RNGs should be reseeded every 2000 iterations to prevent convergence
-    -- TODO: Refactor out this double read/swap and any data races
     reseedAt <- get
-    if (result ^. iterations) > reseedAt
+    if currentIterations > reseedAt
       then do
         liftIO $ do
+          -- This could potentially reseed an empty rendering result if camera
+          -- movement happens exactly between here and the 'lifIO' block above,
+          -- but it won't cause any data races
+          result <- takeMVar mResult
           reseeded <- reseed $ result ^. texture
-          void $! swapMVar mResult $! result & texture .~ reseeded
+
+          void $! putMVar mResult $! result & texture .~ reseeded
         modify (+ reseedInterval)
-      else when ((result ^. iterations) < reseedInterval) $ put reseedInterval
+      else when (currentIterations < reseedInterval) $ put reseedInterval
   where
     -- | How many samples we can render before we have to reseed the RNGs
     reseedInterval :: Int
