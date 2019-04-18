@@ -11,6 +11,7 @@ import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 import Test.Tasty
 import Test.Tasty.Hedgehog
+import qualified Linear as L
 
 import Lib (run)
 import Scene.Intersection
@@ -31,7 +32,7 @@ sphereTests =
             distance = fromJust $ distanceTo ray sphere
             A.T2 (Ray' hitPos _) _ = hit ray distance sphere
 
-        evalExp hitPos === V3 0.0 0.0 diameter
+        (roundTo 3 <$> evalExp hitPos) === V3 0.0 0.0 (roundTo 3 diameter)
     , testProperty "distanceTo ((x, x, x), y) = ||y|| - y + ||(x - y)||" $
       property $ do
         diameter <- forAll $ Gen.float (Range.linearFrac 0.1 100.0)
@@ -43,9 +44,9 @@ sphereTests =
 
         -- Floating point rounding makes this a bit harder than it should be, so
         -- we'll just round the results and asusme they are equal
-        (roundTo 2 <$> evalExp distance) ===
+        (roundTo 1 <$> evalExp distance) ===
           Just
-            (roundTo 2 $
+            (roundTo 1 $
               sqrt (3 * (diameter ** 2)) - diameter +
               sqrt (3 * (offset ** 2)))
     , testProperty "backface culling" $
@@ -58,6 +59,13 @@ sphereTests =
         let sphere = makeSphere (V3 0.0 0.0 0.0) diameter
 
         -- | Hits to a sphere's backface should not be registered
+        evalExp (distanceTo ray sphere) === Nothing
+    , testProperty "no backwards intersections" $
+      property $ do
+        rayDirection <- forAll $ L.normalize <$> v3 (Range.linearFrac (-1.0) 1.0)
+        let ray = Ray' (V3' 0.0 0.0 0.0) (constant rayDirection)
+            sphere = makeSphere (negate rayDirection) (0.1)
+
         evalExp (distanceTo ray sphere) === Nothing
     ]
 
