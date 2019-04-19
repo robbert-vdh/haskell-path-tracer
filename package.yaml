@@ -1,5 +1,5 @@
 name: tracer
-version: 0.1.0.0
+version: 1.0.0.0
 git: git@github.com:robbert-vdh/haskell-path-tracer.git
 license: MIT
 author:
