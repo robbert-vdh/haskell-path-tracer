@@ -100,7 +100,7 @@ main = do
       -- We'll only grab the mouse input when the right button is pressed
       { windowInputGrabbed = False
       , windowInitialSize = V2 (CInt screenWidth) (CInt screenHeight)
-      , windowOpenGL = Just defaultOpenGL {glProfile = Core Normal 3 3}
+      , windowGraphicsContext = OpenGLContext $ defaultOpenGL {glProfile = Core Normal 3 3}
       }
 
   let compute' = compileFor $ scalar initialCamera

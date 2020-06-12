@@ -1,21 +1,22 @@
 # Haskell Path Tracer
 
-## LLVM versions
+**This readme file is partially outdated.**
 
-LLVM version 8.0 recently got released, but it's not yet available in every
-distro. That's why there are two `stack.yaml` files, one supporting LLVM 7.0.1
-and one for LLVM 8.0. Simply _symlink_ the proper one for your system to
-`stack.yaml` to get started:
+## Building
+
+This application requires GHC 8.8.3 and LLVM 9.0.1 to build. An older version of
+GHC can be installed through
+[ghcup](https://gitlab.haskell.org/haskell/ghcup-hs), and support for LLVM 10 is
+tracked in [this issue](https://github.com/llvm-hs/llvm-hs/issues/293). To
+compile, simply run:
 
 ```shell
-# LLVM 7.0.1
-ln -s stack-llvm-7.0.1.yaml stack.yaml
-
-# LLVM 8.0
-ln -s stack-llvm-8.0.yaml stack.yaml
+cabal build
 ```
 
-## Running without a GPU
+### Running without a GPU
+
+TODO:
 
 The application uses Accelerate's PTX LLVM backend by default. To run the
 application without an NVIDIA GPU simply pass the `cpu` flag to the application:

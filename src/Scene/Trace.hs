@@ -84,7 +84,7 @@ primaryRays ~(Camera' cPos cRot (fromIntegral -> cFov)) = map transform
           -- inverted during the computation. This has already been accounted
           -- for in 'screenSize', hence why the Y-axis value gets increased by
           -- two.
-          V2' screenX screenY = rasterPos / screenSize * 2.0 + V2' (-1.0) 1.0
+          V2_ screenX screenY = rasterPos / screenSize * 2.0 + V2_ (-1.0) 1.0
 
           virtualPoint :: Exp Point
           virtualPoint = planeCenter + (planeRightOffset ^* screenX) + (planeTopOffset ^* screenY)
@@ -116,8 +116,8 @@ traceRay limit scene primaryRay =
    in T2 result seed
   where
     initialColor, initialThroughput :: Exp (V3 Float)
-    initialColor = V3' 0.0 0.0 0.0
-    initialThroughput = V3' 1.0 1.0 1.0
+    initialColor = V3_ 0.0 0.0 0.0
+    initialThroughput = V3_ 1.0 1.0 1.0
 
     -- | Check whether the ray has hit something and calculate the prepare the
     -- next ray if we did.
@@ -127,7 +127,7 @@ traceRay limit scene primaryRay =
     check current@(T3 (T2 ray seed) result throughput) =
       let nextHit = closestIntersection scene ray
        in if nearZero throughput || isNothing nextHit
-            then T3 (T2 ray seed) result (V3' 0.0 0.0 0.0)
+            then T3 (T2 ray seed) result (V3_ 0.0 0.0 0.0)
             else calculate current $ fromJust nextHit
 
     -- | Calculate the currently accumulated color and throughput as well as the
@@ -168,7 +168,7 @@ traceRay limit scene primaryRay =
                       b = max 0 $ p * (next `dot` reflection)
                    in T2 next b)
               ]
-              (T2 (V3' 0.0 0.0 0.0) 0)
+              (T2 (V3_ 0.0 0.0 0.0) 0)
 
           nextRay = Ray' (intersection + nextDirection ^* epsilon) nextDirection
        in T3

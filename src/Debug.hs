@@ -1,6 +1,8 @@
+{-# LANGUAGE PatternSynonyms #-}
+
 module Debug where
 
-import Data.Array.Accelerate hiding ((++), uncurry)
+import Data.Array.Accelerate hiding (pattern V2, (++), uncurry)
 import qualified Data.Array.Accelerate.Interpreter as Interpreter
 import Data.Array.Accelerate.Linear
 import Data.List (intercalate)

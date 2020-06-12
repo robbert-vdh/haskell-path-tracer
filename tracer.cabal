@@ -1,0 +1,158 @@
+cabal-version:        3.0
+name:                 tracer
+version:              1.1.0.0
+synopsis:             A path tracing algorithm implemented using Accelerate.
+homepage:             https://github.com/robbert-vdh/haskell-path-tracer
+license:              MIT
+license-file:         LICENSE
+
+author:               Gijs van Steenpaal, Robbert van der Helm
+maintainer:           mail@robbertvanderhelm.nl
+copyright:            2019-2020 Gijs van Steenpaal, Robert van der Helm
+
+description:          Please see the included README file.
+
+source-repository head
+    type:             git
+    location:         https://github.com/robbert-vdh/haskell-path-tracer
+
+flag Cpu
+    description:      Run the application using Accelerate's CPU backend.
+    manual:           True
+    default:          False
+
+extra-source-files:   README.md, CHANGELOG.md
+
+common:
+    ghc-options:      -Wall
+
+-- TODO: Add missing version constraints
+
+library
+    hs-source-dirs:   src
+    default-language: Haskell2010
+
+    exposed-modules:
+        Data.Array.Accelerate.Linear.Projection
+        Debug
+        Lib
+        Scene.Intersection
+        Scene.Objects
+        Scene.Trace
+        Scene.World
+        TH
+        Util
+
+    build-depends:
+        base ==4.13.0.0,
+        accelerate ^>=1.4.0.0,
+        bytestring,
+        deepseq,
+        lens-accelerate ^>=0.3.0.0,
+        linear,
+        linear-accelerate ^>=0.7.0.0,
+        mwc-random,
+        template-haskell,
+        transformers,
+
+    -- We don't need to compile the Accelerate backend we're not using. If we
+    -- don't do this, you won't be able to compile the CPU version without
+    -- having the CUDA toolchain installed.
+    if flag(Cpu)
+        build-depends: accelerate-llvm-native ^>=1.4.0.0
+        cpp-options:   -DUSE_CPU_BACKEND'
+    else
+        build-depends: accelerate-llvm-ptx ^>=1.4.0.0
+
+    other-extensions:
+        ConstraintKinds
+        CPP
+        DefaultSignatures
+        DeriveAnyClass
+        DeriveGeneric
+        ExistentialQuantification
+        FlexibleContexts
+        FlexibleInstances
+        FunctionalDependencies
+        MultiParamTypeClasses
+        PatternSynonyms
+        RankNTypes
+        RebindableSyntax
+        ScopedTypeVariables
+        Strict
+        TemplateHaskell
+        TupleSections
+        TypeApplications
+        TypeFamilies
+        TypeOperators
+        UndecidableInstances
+        ViewPatterns
+
+executable tracer
+    main-is:          Main.hs
+    hs-source-dirs:   app
+    default-language: Haskell2010
+
+    ghc-options:
+        -threaded
+        -rtsopts
+        -with-rtsopts=-N
+        -O2
+
+    build-depends:
+        tracer,
+
+        base ==4.13.0.0,
+        accelerate ^>=1.4.0.0,
+        accelerate-io-vector,
+        bytestring,
+        lens,
+        linear,
+        text,
+        transformers,
+        vector,
+
+        -- OpenGL related packages
+        GLUtil,
+        OpenGL,
+        sdl2,
+        sdl2-ttf,
+
+        -- Used to create temporary file as a workaround for sdl2-ttf's decode
+        -- function not working properly
+        temporary,
+
+    other-extensions:
+        BangPatterns
+        FlexibleInstances
+        FunctionalDependencies
+        LambdaCase
+        MultiParamTypeClasses
+        NamedFieldPuns
+        OverloadedStrings
+        RecordWildCards
+        TemplateHaskell
+        TypeApplications
+        TypeOperators
+        ViewPatterns
+
+test-suite tracer-test
+    type:             exitcode-stdio-1.0
+    hs-source-dirs:   test
+    main-is:          Spec.hs
+    default-language: Haskell2010
+
+    ghc-options:
+        -threaded
+        -rtsopts
+        -with-rtsopts=-N
+
+    build-depends:
+        tracer,
+
+        base ==4.13.0.0,
+
+        hedgehog,
+        tasty,
+        tasty-hedgehog,
+

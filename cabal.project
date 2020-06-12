@@ -1,0 +1,61 @@
+packages:  .
+
+package accelerate
+    flags: +debug
+
+-- accelerate-1.4.0.0+
+source-repository-package
+    type: git
+    location: https://github.com/AccelerateHS/accelerate.git
+    tag: 170a2474705544bc4037f0ac2814a44edeb0790e
+
+-- accelerate-io-*-0.1.0.0+
+-- TODO: This does not support Accelerate 1.4.0.0 yet and requires updating
+--       first
+source-repository-package
+    type: git
+    location: https://github.com/robbert-vdh/accelerate-io.git
+    tag: 05cc21fa90376f2c99d6057e51b7a7b223cd1890
+    subdir:
+        accelerate-io
+        accelerate-io-array
+        accelerate-io-bmp
+        accelerate-io-bytestring
+        accelerate-io-cereal
+        accelerate-io-JuicyPixels
+        accelerate-io-repa
+        accelerate-io-vector
+
+-- accelerate-llvm-*-1.4.0.0+
+source-repository-package
+    type: git
+    location: https://github.com/AccelerateHS/accelerate-llvm.git
+    tag: 55ca08348002d69e54a146657cb15867582d0133
+    subdir:
+        accelerate-llvm
+        accelerate-llvm-native
+        accelerate-llvm-ptx
+
+-- cuda-0.10.1.1, required for accelerate-llvm-ptx
+source-repository-package
+    type: git
+    location: https://github.com/tmcdonell/cuda.git
+    tag: bf6efc8f9118caac91bde8c9535970f7ab645ead
+
+-- nvvm-0.10.0.0, required for accelerate-llvm-ptx
+source-repository-package
+    type: git
+    location: https://github.com/tmcdonell/nvvm.git
+    tag: 219637eab3aab7275ce0a0c9b0e1855be912fe8a
+
+-- linear-accelerate-0.7.0.0+
+source-repository-package
+    type: git
+    location: https://github.com/robbert-vdh/linear-accelerate.git
+    tag: 0db4d3a2d1b54e5b429b8ef9633abe9954528261
+
+-- lens-accelerate-0.3.0.0
+source-repository-package
+    type: git
+    location: https://github.com/tmcdonell/lens-accelerate.git
+    tag: b74eb8098735b1ad6cff3c5655af03d3f29b9f8e

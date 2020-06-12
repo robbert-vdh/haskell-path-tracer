@@ -28,7 +28,7 @@ sphereTests =
       property $ do
         diameter <- forAll $ Gen.float (Range.linearFrac 0.0 100.0)
         let sphere = makeSphere (V3 diameter 0.0 diameter) diameter
-            ray = Ray' (V3' 0.0 0.0 0.0) (V3' 0.0 0.0 1.0)
+            ray = Ray' (V3_ 0.0 0.0 0.0) (V3_ 0.0 0.0 1.0)
             distance = fromJust $ distanceTo ray sphere
             A.T2 (Ray' hitPos _) _ = hit ray distance sphere
 
@@ -39,7 +39,7 @@ sphereTests =
         offset <- forAll $ Gen.float (Range.linearFrac 0.1 100.0)
         let pos = diameter + offset
             sphere = makeSphere (V3 pos pos pos) diameter
-            ray = Ray' (V3' 0.0 0.0 0.0) (normalize $ V3' 1.0 1.0 1.0)
+            ray = Ray' (V3_ 0.0 0.0 0.0) (normalize $ V3_ 1.0 1.0 1.0)
             distance = distanceTo ray sphere
 
         -- Floating point rounding makes this a bit harder than it should be, so
@@ -54,7 +54,7 @@ sphereTests =
         diameter <- forAll $ Gen.float (Range.linearFrac 0.1 100.0)
         ray <-
           forAll $
-          Ray' (V3' 0.0 0.0 0.0) . normalize . constant <$>
+          Ray' (V3_ 0.0 0.0 0.0) . normalize . constant <$>
           v3 (Range.linearFrac (-1.0) 1.0)
         let sphere = makeSphere (V3 0.0 0.0 0.0) diameter
 
@@ -63,7 +63,7 @@ sphereTests =
     , testProperty "no backwards intersections" $
       property $ do
         rayDirection <- forAll $ L.normalize <$> v3 (Range.linearFrac (-1.0) 1.0)
-        let ray = Ray' (V3' 0.0 0.0 0.0) (constant rayDirection)
+        let ray = Ray' (V3_ 0.0 0.0 0.0) (constant rayDirection)
             sphere = makeSphere (negate rayDirection) 0.1
 
         evalExp (distanceTo ray sphere) === Nothing
@@ -82,7 +82,7 @@ planeTests =
         let pos = V3 (fromIntegral x) (fromIntegral y) z
             nor = V3 0.0 0.0 (-1.0)
             plane = makePlane pos nor
-            ray = Ray' (V3' 0.0 0.0 0.0) (V3' 0.0 0.0 1.0)
+            ray = Ray' (V3_ 0.0 0.0 0.0) (V3_ 0.0 0.0 1.0)
 
         -- Check if there was a hit
         evalExp (distanceTo ray plane) === Just z
@@ -94,7 +94,7 @@ planeTests =
         let pos = V3 (fromIntegral x) (fromIntegral y) z
             nor = V3 0.0 0.0 1.0
             plane = makePlane pos nor
-            ray = Ray' (V3' 0.0 0.0 0.0) (V3' 0.0 0.0 1.0)
+            ray = Ray' (V3_ 0.0 0.0 0.0) (V3_ 0.0 0.0 1.0)
 
         -- Check if there was a hit
         evalExp (distanceTo ray plane) === Nothing
@@ -103,7 +103,7 @@ planeTests =
         x <- forAll $ Gen.float (Range.linearFrac (-1000.0) 1000.0)
         y <- forAll $ Gen.float (Range.linearFrac (-1000.0) 1000.0)
         let dir = constant $ L.normalize (V3 x y 1.0)
-            ray = Ray' (V3' 0.0 0.0 0.0) dir
+            ray = Ray' (V3_ 0.0 0.0 0.0) dir
             plane = makePlane (V3 0.0 0.0 1.0) (V3 0.0 0.0 (-1.0))
 
         -- TODO: get angle the ray is at, use pythagoras to find distance.
@@ -114,7 +114,7 @@ planeTests =
         x <- forAll $ Gen.float (Range.linearFrac (-1000.0) 1000.0)
         y <- forAll $ Gen.float (Range.linearFrac (-1000.0) 1000.0)
         let dir = constant $ L.normalize (V3 x y 1.0)
-            ray = Ray' (V3' 0.0 0.0 0.0) dir
+            ray = Ray' (V3_ 0.0 0.0 0.0) dir
             plane = makePlane (V3 0.0 0.0 1.0) (V3 0.0 0.0 1.0)
 
         evalExp (distanceTo ray plane) === Nothing
