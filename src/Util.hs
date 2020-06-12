@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeOperators #-}
@@ -10,7 +11,7 @@ module Util where
 
 import Control.Monad (replicateM)
 import Control.Monad.Trans.State.Strict (runState, state)
-import Data.Array.Accelerate as A
+import Data.Array.Accelerate as A hiding (pattern V2, pattern V3)
 import qualified Data.Array.Accelerate.Array.Sugar as S
 import Data.Array.Accelerate.Control.Lens
 import Data.Array.Accelerate.Data.Functor as A hiding ((<$>))
@@ -44,9 +45,9 @@ anglesToDirection angles =
 -- conversion was copied from
 -- https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles#Source_Code.
 anglesToQuaternion :: Exp Direction -> Exp (Quaternion Float)
-anglesToQuaternion ~(V3' roll pitch yaw) =
-  Quaternion' (cy' * cp' * cr' + sy' * sp' * sr') $
-  V3'
+anglesToQuaternion ~(V3_ roll pitch yaw) =
+  Quaternion_ (cy' * cp' * cr' + sy' * sp' * sr') $
+  V3_
     (cy' * cp' * sr' - sy' * sp' * cr')
     (sy' * cp' * sr' + cy' * sp' * cr')
     (sy' * cp' * cr' - cy' * sp' * sr')
@@ -83,7 +84,7 @@ translate delta camera = camera & position' +~ translation
 -- function in 'Linear.V4' that has the same signature, but it also normalizes
 -- based on the @w@ coordinate causing vectors (with @w = 0@) to become NaN.
 fromHomogeneous :: Elt a => Exp (V4 a) -> Exp (V3 a)
-fromHomogeneous ~(V4' x y z _) = V3' x y z
+fromHomogeneous ~(V4_ x y z _) = V3_ x y z
 
 -- | The world's 'forward' direction. This is the direction the camera looks
 -- into when it has not been rotated.
@@ -128,7 +129,7 @@ genFloat' seed = (nextFloat, nextSeed)
 -- | Generate a random vector whose three values are in the range @[-1, 1]@.
 -- This value can be used to create a quaternion for rotation a vector.
 genVec :: Exp Word32 -> Exp (V3 Float, Word32)
-genVec seed = P.uncurry T2 $ runState (V3' <$> rng <*> rng <*> rng) seed
+genVec seed = P.uncurry T2 $ runState (V3_ <$> rng <*> rng <*> rng) seed
   where
     rng = state genFloat'
 
@@ -218,7 +219,7 @@ screenAspect = P.fromIntegral screenWidth / P.fromIntegral screenHeight
 -- between rasterization and screen spaces.
 screenSize :: Exp (V2 Float)
 screenSize =
-  V2' (P.fromIntegral screenWidth) (P.fromIntegral $ negate screenHeight)
+  V2_ (P.fromIntegral screenWidth) (P.fromIntegral $ negate screenHeight)
 
 -- | The output matrix initialized with all zero values and intiial seeds. This
 -- is used during the initialization and after moving the camera.

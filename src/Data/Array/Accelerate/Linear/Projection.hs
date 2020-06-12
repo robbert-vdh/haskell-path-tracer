@@ -24,11 +24,11 @@ lookAt ::
   -> Exp (V3 a) -- ^ Up
   -> Exp (M44 a)
 lookAt eye center up =
-  V4'
-    (V4' (xa ^. _x) (xa ^. _y) (xa ^. _z) xd)
-    (V4' (ya ^. _x) (ya ^. _y) (ya ^. _z) yd)
-    (V4' (-za ^. _x) (-za ^. _y) (-za ^. _z) zd)
-    (V4' 0 0 0 1)
+  V4_
+    (V4_ (xa ^. _x) (xa ^. _y) (xa ^. _z) xd)
+    (V4_ (ya ^. _x) (ya ^. _y) (ya ^. _z) yd)
+    (V4_ (-za ^. _x) (-za ^. _y) (-za ^. _z) zd)
+    (V4_ 0 0 0 1)
   where
     za = normalize $ center - eye
     xa = normalize $ cross za up
@@ -47,11 +47,11 @@ lookAtScratch ::
   -> Exp (V3 a) -- ^ Tmp
   -> Exp (M44 a)
 lookAtScratch from' to' tmp =
-  V4'
-    (V4' (right ^. _x)   (right ^. _y)   (right ^. _z)   0)
-    (V4' (up ^. _x)      (up ^. _y)      (up ^. _z)      0)
-    (V4' (forward ^. _x) (forward ^. _y) (forward ^. _z) 0)
-    (V4' (from' ^. _x)    (from' ^. _y)    (from' ^. _z)    0)
+  V4_
+    (V4_ (right ^. _x)   (right ^. _y)   (right ^. _z)   0)
+    (V4_ (up ^. _x)      (up ^. _y)      (up ^. _z)      0)
+    (V4_ (forward ^. _x) (forward ^. _y) (forward ^. _z) 0)
+    (V4_ (from' ^. _x)    (from' ^. _y)    (from' ^. _z)    0)
   where
     forward = normalize (from' - to')
     right   = (normalize tmp) `cross` forward
@@ -66,10 +66,10 @@ perspective ::
   -> Exp a -- ^ Far plane
   -> Exp (M44 a)
 perspective fovy aspect near far =
-  V4' (V4' x 0 0 0)
-      (V4' 0 y 0 0)
-      (V4' 0 0 z w)
-      (V4' 0 0 (-1) 0)
+  V4_ (V4_ x 0 0 0)
+      (V4_ 0 y 0 0)
+      (V4_ 0 0 z w)
+      (V4_ 0 0 (-1) 0)
   where
     tanHalfFovy = tan $ fovy / 2
     x = 1 / (aspect * tanHalfFovy)
@@ -92,10 +92,10 @@ infinitePerspective ::
   -> Exp a -- ^ Near plane
   -> Exp (M44 a)
 infinitePerspective fovy a n =
-  V4' (V4' x 0 0 0)
-      (V4' 0 y 0 0)
-      (V4' 0 0 (-1) w)
-      (V4' 0 0 (-1) 0)
+  V4_ (V4_ x 0 0 0)
+      (V4_ 0 y 0 0)
+      (V4_ 0 0 (-1) w)
+      (V4_ 0 0 (-1) 0)
   where
     t = n * tan (fovy / 2)
     b = -t
@@ -112,10 +112,10 @@ inverseInfinitePerspective ::
   -> Exp a -- ^ Near plane
   -> Exp (M44 a)
 inverseInfinitePerspective fovy a n =
-  V4' (V4' rx 0 0 0)
-      (V4' 0 ry 0 0)
-      (V4' 0 0 0 (-1))
-      (V4' 0 0 rw (-rw))
+  V4_ (V4_ rx 0 0 0)
+      (V4_ 0 ry 0 0)
+      (V4_ 0 0 0 (-1))
+      (V4_ 0 0 rw (-rw))
   where
     t = n * tan (fovy / 2)
     b = -t

@@ -18,8 +18,6 @@ import Data.Array.Accelerate as A
 import Data.Array.Accelerate.Array.Sugar
 import Data.Array.Accelerate.Control.Lens hiding (Const)
 import Data.Array.Accelerate.Linear as A
-import Data.Array.Accelerate.Product
-import Data.Array.Accelerate.Smart
 import Data.Typeable
 
 import Prelude ((<$>))
@@ -43,7 +41,7 @@ data Camera = Camera
   , _cameraRotation :: Direction
   -- | The camera's horizontal field of view in degrees.
   , _cameraFov :: Int
-  } deriving (Prelude.Eq, Show, Generic, Elt, IsProduct cst)
+  } deriving (Prelude.Eq, Show, Generic, Elt)
 
 data Brdf
   = Diffuse {-# UNPACK #-} Float
@@ -54,13 +52,13 @@ data Material = Material
   { _materialColor :: {-# UNPACK #-} Color
   , _materialIlluminance :: {-# UNPACK #-} Float
   , _materialBrdf :: Brdf
-  } deriving (Prelude.Eq, Show, Generic, Elt, IsProduct cst)
+  } deriving (Prelude.Eq, Show, Generic, Elt)
 
 data Plane = Plane
   { _planePosition :: {-# UNPACK #-} Point
   , _planeDirection :: {-# UNPACK #-} Direction
   , _planeMaterial :: Material
-  } deriving (Prelude.Eq, Show, Generic, Elt, IsProduct cst)
+  } deriving (Prelude.Eq, Show, Generic, Elt)
 
 -- | Any ray that is cast through the scene. This is defined as a type alias as
 -- the 'Ray' has to be polymorphic in order to to be able to lift a @Ray (Exp
@@ -70,17 +68,39 @@ type RayF = Ray Float
 data Ray a = Ray
   { _rayOrigin :: V3 a
   , _rayDirection :: V3 a
-  } deriving (Prelude.Eq, Show, Generic, Elt, IsProduct cst)
+  } deriving (Prelude.Eq, Show, Generic, Elt)
 
 data Sphere = Sphere
   { _spherePosition :: {-# UNPACK #-} Point
   , _sphereRadius :: {-# UNPACK #-} Float
   , _sphereMaterial :: {-# UNPACK #-} Material
-  } deriving (Prelude.Eq, Show, Generic, Elt, IsProduct cst)
+  } deriving (Prelude.Eq, Show, Generic, Elt)
+
+-- * Pattern synonyms
+--
+-- See the documentation for 'Data.Array.Accelerate' for more information about
+-- these.
+
+-- TODO: Use the new naming convention for these pattersn
+-- TODO: Mark these pattern synonyms as complete, and remove irrefutable
+--       patterns when they are currently used
+
+pattern Camera' :: Exp Point -> Exp Direction -> Exp Int -> Exp Camera
+pattern Camera' p d f = Pattern (p, d, f)
+
+pattern Material' :: Exp Color -> Exp Float -> Exp Brdf -> Exp Material
+pattern Material' c i b = Pattern (c, i, b)
+
+pattern Plane' :: Exp Point -> Exp Direction -> Exp Material -> Exp Plane
+pattern Plane' p d m = Pattern (p, d, m)
+
+pattern Ray' :: Elt a => Exp (V3 a) -> Exp (V3 a) -> Exp (Ray a)
+pattern Ray' o d = Pattern (o, d)
+
+pattern Sphere' :: Exp Point -> Exp Float -> Exp Material -> Exp Sphere
+pattern Sphere' p r m = Pattern (p, r, m)
 
 -- * Instances
---
--- The implementations for 'Elt' and 'IsProduct' are derived through 'Generic'.
 
 instance Lift Exp Camera where
   type Plain Camera = Camera
@@ -96,7 +116,7 @@ instance Lift Exp Material where
 
 instance (Lift Exp a, Elt (Plain a)) => Lift Exp (Ray a) where
   type Plain (Ray a) = Ray (Plain a)
-  lift (Ray o d) = Exp $ Tuple $ NilTup `SnocTup` lift o `SnocTup` lift d
+  lift (Ray o d) = Ray' (lift o) (lift d)
 
 instance Lift Exp Sphere where
   type Plain Sphere = Sphere
@@ -117,15 +137,6 @@ instance Elt Brdf where
   fromElt (Diffuse p) = fromElt (False, p)
   fromElt (Glossy p) = fromElt (True, p)
 
-instance (cst Bool, cst Float) => IsProduct cst Brdf where
-  type ProdRepr Brdf = ProdRepr (Bool, Float)
-  toProd t = case toProd @cst t of
-               (False, p) -> Diffuse p
-               (True, p) -> Glossy p
-  fromProd (Diffuse p) = fromProd @cst (False, p)
-  fromProd (Glossy p) = fromProd @cst (True, p)
-  prod = prod @cst @(Bool, Float)
-
 instance Lift Exp Brdf where
   type Plain Brdf = Brdf
   lift = constant
@@ -137,67 +148,70 @@ instance Lift Exp Brdf where
 
 makeFields ''Scene
 
+-- TODO: Check if there is a new, better way to define these lenses
+
 class HasBrdf t a | t -> a where
   brdf :: Getter (Exp t) (Exp a)
 instance HasBrdf Material Brdf where
-  brdf = to $ \t -> Exp $ ZeroTupIdx `Prj` t
+  brdf = to $ \(Material' _ _ b) -> b
 
 class HasColor t a | t -> a where
   color :: Getter (Exp t) (Exp a)
 instance HasColor Material Color where
-  color = to $ \t -> Exp $ SuccTupIdx (SuccTupIdx ZeroTupIdx) `Prj` t
+  color = to $ \(Material' c _ _) -> c
 
 class HasDirection t a | t -> a where
   direction :: Getter (Exp t) (Exp a)
 instance HasDirection Plane Direction where
-  direction = to $ \t -> Exp $ SuccTupIdx (SuccTupIdx ZeroTupIdx) `Prj` t
+  direction = to $ \(Plane' _ d _) -> d
 instance Elt a => HasDirection (Ray a) (V3 a) where
-  direction = to $ \t -> Exp $ ZeroTupIdx `Prj` t
+  direction = to $ \(Ray' _ d) -> d
 
 class HasFov t a | t -> a where
   fov :: Getter (Exp t) (Exp a)
 instance HasFov Camera Int where
-  fov = to $ \t -> Exp $ ZeroTupIdx `Prj` t
+  fov = to $ \(Camera' _ _ f) -> f
 
 class HasIlluminance t a | t -> a where
   illuminance :: Getter (Exp t) (Exp a)
 instance HasIlluminance Material Float where
-  illuminance = to $ \t -> Exp $ SuccTupIdx ZeroTupIdx `Prj` t
+  illuminance = to $ \(Material' _ i _) -> i
 
 class HasMaterial t a | t -> a where
   material :: Getter (Exp t) (Exp a)
 instance HasMaterial Plane Material where
-  material = to $ \t -> Exp $ ZeroTupIdx `Prj` t
+  material = to $ \(Plane' _ _ m) -> m
 instance HasMaterial Sphere Material where
-  material = to $ \t -> Exp $ ZeroTupIdx `Prj` t
+  material = to $ \(Sphere' _ _ m) -> m
 
 class HasOrigin t a | t -> a where
   origin :: Getter (Exp t) (Exp a)
 instance Elt a => HasOrigin (Ray a) (V3 a) where
-  origin = to $ \t -> Exp $ SuccTupIdx ZeroTupIdx `Prj` t
+  origin = to $ \(Ray' o _) -> o
 
 class HasPosition t a | t -> a where
   position :: Getter (Exp t) (Exp a)
 instance HasPosition Camera Point where
-  position = to $ \t -> Exp $ SuccTupIdx (SuccTupIdx ZeroTupIdx) `Prj` t
+  position = to $ \(Camera' p _ _) -> p
 instance HasPosition Plane Point where
-  position = to $ \t -> Exp $ SuccTupIdx (SuccTupIdx ZeroTupIdx) `Prj` t
+  position = to $ \(Plane' p _ _) -> p
 instance HasPosition Sphere Point where
-  position = to $ \t -> Exp $ SuccTupIdx (SuccTupIdx ZeroTupIdx) `Prj` t
+  position = to $ \(Sphere' p _ _) -> p
 
 class HasRadius t a | t -> a where
   radius :: Getter (Exp t) (Exp a)
 instance HasRadius Sphere Float where
-  radius = to $ \t -> Exp $ SuccTupIdx ZeroTupIdx `Prj` t
+  radius = to $ \(Sphere' _ r _) -> r
 
 class HasRotation t a | t -> a where
   rotation :: Getter (Exp t) (Exp a)
 instance HasRotation Camera Direction where
-  rotation = to $ \t -> Exp $ SuccTupIdx ZeroTupIdx `Prj` t
+  rotation = to $ \(Camera' _ d _) -> d
 
 -- These two lenses are used for camera movement. As they're the only two lenses
 -- we need that have setters and are not lifted to 'Exp's we'll dimply define
 -- them manually.
+-- TODO: Maybe update these too
 
 rotation' :: Lens' Camera Direction
 rotation' f c@Camera {_cameraRotation = rot} =
@@ -205,26 +219,6 @@ rotation' f c@Camera {_cameraRotation = rot} =
 position' :: Lens' Camera Point
 position' f c@Camera {_cameraPosition = pos} =
   (\x -> c {_cameraPosition = x}) <$> f pos
-
--- * Pattern synonyms
---
--- See the documentation for 'Data.Array.Accelerate' for more information about
--- these.
-
-pattern Camera' :: Exp Point -> Exp Direction -> Exp Int -> Exp Camera
-pattern Camera' p d f = Pattern (p, d, f)
-
-pattern Material' :: Exp Color -> Exp Float -> Exp Brdf -> Exp Material
-pattern Material' c i b = Pattern (c, i, b)
-
-pattern Plane' :: Exp Point -> Exp Direction -> Exp Material -> Exp Plane
-pattern Plane' p d m = Pattern (p, d, m)
-
-pattern Ray' :: Elt a => Exp (V3 a) -> Exp (V3 a) -> Exp (Ray a)
-pattern Ray' o d = Pattern (o, d)
-
-pattern Sphere' :: Exp Point -> Exp Float -> Exp Material -> Exp Sphere
-pattern Sphere' p r m = Pattern (p, r, m)
 
 -- ** BRDF
 --
@@ -236,10 +230,10 @@ pattern Brdf' t p = Pattern (t, p)
 
 -- These sadly don't work, but I'll leave them in until they somehow do
 pattern Diffuse' :: Exp Float -> Exp Brdf
-pattern Diffuse' p = Brdf' (Exp (Const False)) p
+pattern Diffuse' p = Brdf' False_ p
 
 pattern Glossy' :: Exp Float -> Exp Brdf
-pattern Glossy' p = Brdf' (Exp (Const True)) p
+pattern Glossy' p = Brdf' True_ p
 
 isDiffuse, isGlossy :: Exp Brdf -> Exp Bool
 isDiffuse (Brdf' t _) = t == constant False
