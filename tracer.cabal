@@ -12,6 +12,8 @@ copyright:            2019-2020 Gijs van Steenpaal, Robert van der Helm
 
 description:          Please see the included README file.
 
+extra-source-files:   README.md, CHANGELOG.md
+
 source-repository head
     type:             git
     location:         https://github.com/robbert-vdh/haskell-path-tracer
@@ -21,14 +23,13 @@ flag Cpu
     manual:           True
     default:          False
 
-extra-source-files:   README.md, CHANGELOG.md
-
-common:
-    ghc-options:      -Wall
-
 -- TODO: Add missing version constraints
 
+common options
+    ghc-options:      -Wall
+
 library
+    import:           options
     hs-source-dirs:   src
     default-language: Haskell2010
 
@@ -50,7 +51,7 @@ library
         deepseq,
         lens-accelerate ^>=0.3.0.0,
         linear,
-        linear-accelerate ^>=0.7.0.0,
+        linear-accelerate ^>=0.8.0.0,
         mwc-random,
         template-haskell,
         transformers,
@@ -89,6 +90,7 @@ library
         ViewPatterns
 
 executable tracer
+    import:           options
     main-is:          Main.hs
     hs-source-dirs:   app
     default-language: Haskell2010
@@ -137,6 +139,7 @@ executable tracer
         ViewPatterns
 
 test-suite tracer-test
+    import:           options
     type:             exitcode-stdio-1.0
     hs-source-dirs:   test
     main-is:          Spec.hs
@@ -147,12 +150,18 @@ test-suite tracer-test
         -rtsopts
         -with-rtsopts=-N
 
+    other-modules:
+        Scene.Intersection.Tests
+
     build-depends:
         tracer,
 
         base ==4.13.0.0,
 
+        accelerate ^>=1.4.0.0,
         hedgehog,
+        linear,
+        linear-accelerate ^>=0.8.0.0,
         tasty,
         tasty-hedgehog,
 

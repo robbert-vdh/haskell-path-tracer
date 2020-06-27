@@ -48,11 +48,11 @@ source-repository-package
     location: https://github.com/tmcdonell/nvvm.git
     tag: 219637eab3aab7275ce0a0c9b0e1855be912fe8a
 
--- linear-accelerate-0.7.0.0+
+-- linear-accelerate-0.8.0.0+
 source-repository-package
     type: git
-    location: https://github.com/robbert-vdh/linear-accelerate.git
-    tag: 0db4d3a2d1b54e5b429b8ef9633abe9954528261
+    location: https://github.com/ekmett/linear-accelerate.git
+    tag: 1f69959d985f8c3c116795fa896b227f03ac37d6
 
 -- lens-accelerate-0.3.0.0
 source-repository-package
