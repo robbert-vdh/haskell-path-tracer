@@ -1,31 +1,25 @@
 # Haskell Path Tracer
 
-**This readme file is partially outdated.**
-
 ## Building
 
 This application requires GHC 8.8.3 and LLVM 9.0.1 to build. An older version of
 GHC can be installed through
 [ghcup](https://gitlab.haskell.org/haskell/ghcup-hs), and support for LLVM 10 is
 tracked in [this issue](https://github.com/llvm-hs/llvm-hs/issues/293). To
-compile, simply run:
+compile and run, simply run:
 
 ```shell
-cabal build
+cabal run -j tracer
 ```
 
 ### Running without a GPU
-
-TODO:
 
 The application uses Accelerate's PTX LLVM backend by default. To run the
 application without an NVIDIA GPU simply pass the `cpu` flag to the application:
 
 ```shell
-stack build --flag tracer:cpu --exec tracer-exe
+cabal run -j -fcpu tracer
 ```
-
-Otherwise simply use `stack run` to compile and run the application.
 
 ## Native dependencies
 
@@ -40,25 +34,13 @@ project so it might be necessary to install LLVM's from their own
 
 ```shell
 sudo apt update
-sudo apt install libsdl2-dev libsdl2-ttf-dev llvm-7-dev
+sudo apt install libsdl2-dev libsdl2-ttf-dev llvm-9-dev
 ```
 
 ### Arch, Manjaro and derivatives
 
 ```shell
-sudo pacman -S sdl2 sdl2_ttf llvm-libs
-```
-
-## Library documentation
-
-The application depends on an unreleased version of Accelerate. Therefore it
-might be useful to generate the documentation locally instead of using the
-documentation available on Hackage:
-
-```shell
-stack haddock --open
-stack hoogle '<query>'
-stack hoogle -- --server
+sudo pacman -S sdl2 sdl2_ttf llvm9
 ```
 
 ## Resources
