@@ -18,7 +18,6 @@ import Data.Array.Accelerate as A
 import Data.Array.Accelerate.Array.Sugar
 import Data.Array.Accelerate.Control.Lens hiding (Const)
 import Data.Array.Accelerate.Linear as A
-import Data.Array.Accelerate.Smart
 import Data.Typeable
 
 import Prelude ((<$>))
