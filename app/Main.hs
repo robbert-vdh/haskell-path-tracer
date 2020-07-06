@@ -2,7 +2,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -46,7 +45,6 @@ import Data.Word (Word32)
 import Foreign.C.Types (CInt(..))
 import qualified Graphics.GLUtil as GLU
 import qualified Graphics.Rendering.OpenGL as GL
-import Linear (V2)
 import SDL hiding (Point, get, translation)
 import qualified SDL.Font as Font
 import qualified SDL
@@ -380,7 +378,7 @@ initResources = do
       (GL.ToFloat, GL.VertexArrayDescriptor 2 GL.Float 0 GLU.offset0)
     GL.vertexAttribArray vertexAttrib $= GL.Enabled
 
-  GL.currentProgram $= (Just $ GLU.program program')
+  GL.currentProgram $= Just (GLU.program program')
 
   -- We have to make sure the maximum number of mipmaps is set to zero,
   -- otherwise the texture will be incomplete and not render at all

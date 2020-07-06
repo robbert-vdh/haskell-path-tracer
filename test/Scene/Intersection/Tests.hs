@@ -5,7 +5,7 @@ module Scene.Intersection.Tests
 import qualified Data.Array.Accelerate as A
 import Data.Array.Accelerate (Elt, Exp, constant, unit)
 import Data.Array.Accelerate.Data.Maybe
-import Data.Array.Accelerate.Linear hiding (distance)
+import Data.Array.Accelerate.Linear hiding (distance, point)
 import Hedgehog
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
@@ -74,13 +74,10 @@ planeTests =
   testGroup
     "Plane"
     [
-      testProperty "Continious Straight on" $
+      testProperty "Continuous Straight on" $
       property $ do
-        x <- forAll $ Gen.int (Range.linearBounded :: Range Int)
-        y <- forAll $ Gen.int (Range.linearBounded :: Range Int)
-        z <- forAll $ Gen.float (Range.linearFrac 1.0 1000.0)
-        let pos = V3 (fromIntegral x) (fromIntegral y) z
-            nor = V3 0.0 0.0 (-1.0)
+        pos@(V3 _ _ z) <- forAll point
+        let nor = V3 0.0 0.0 (-1.0)
             plane = makePlane pos nor
             ray = Ray' (V3_ 0.0 0.0 0.0) (V3_ 0.0 0.0 1.0)
 
@@ -88,17 +85,14 @@ planeTests =
         evalExp (distanceTo ray plane) === Just z
     , testProperty "Backface culling Straight on" $
       property $ do
-        x <- forAll $ Gen.int (Range.linearBounded :: Range Int)
-        y <- forAll $ Gen.int (Range.linearBounded :: Range Int)
-        z <- forAll $ Gen.float (Range.linearFrac 1.0 1000.0)
-        let pos = V3 (fromIntegral x) (fromIntegral y) z
-            nor = V3 0.0 0.0 1.0
+        pos <- forAll point
+        let nor = V3 0.0 0.0 1.0
             plane = makePlane pos nor
             ray = Ray' (V3_ 0.0 0.0 0.0) (V3_ 0.0 0.0 1.0)
 
         -- Check if there was a hit
         evalExp (distanceTo ray plane) === Nothing
-    , testProperty "Continious Angles" $
+    , testProperty "Continuous Angles" $
       property $ do
         x <- forAll $ Gen.float (Range.linearFrac (-1000.0) 1000.0)
         y <- forAll $ Gen.float (Range.linearFrac (-1000.0) 1000.0)
@@ -157,6 +151,9 @@ roundTo :: Int -> Float -> Float
 roundTo places i = fromInteger (round $ i * (10 ^ places)) / (10.0 ^^ places)
 
 -- * Generators
+
+point :: Gen (V3 Float)
+point = v3 (Range.linearFracFrom 0 (-1000) 1000)
 
 v3 :: Range Float -> Gen (V3 Float)
 v3 r = V3 <$> Gen.float r <*> Gen.float r <*> Gen.float r

@@ -16,6 +16,8 @@ import Data.Array.Accelerate.Linear
 
 import qualified Prelude as P ()
 
+{-# ANN inverseInfinitePerspective "HLint: ignore Reduce duplication" #-}
+
 -- | Build a look at view matrix
 lookAt ::
      (Epsilon a, Floating a)
@@ -54,7 +56,7 @@ lookAtScratch from' to' tmp =
     (V4_ (from' ^. _x)    (from' ^. _y)    (from' ^. _z)    0)
   where
     forward = normalize (from' - to')
-    right   = (normalize tmp) `cross` forward
+    right   = normalize tmp `cross` forward
     up      = forward `cross` right
 
 -- | Build a matrix for a symmetric perspective-view frustum
