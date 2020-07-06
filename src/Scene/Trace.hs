@@ -28,25 +28,24 @@ import Scene.World
 import Util
 
 -- | Render a single sample, combining the previous results with the newly
--- generated sample. This result is an array of color values summed over the
--- entire runtime of the application (or until the rendering gets reset). The
--- sums can then be divided by the number of samples directly in an OpenGL
--- fragment shader to obtain the final per-pixel averages.
+-- generated sample. In the application, we use the 'compileFor' function to fix
+-- the first two arguments since those won't ever change until we have to reset
+-- the computations because the camera was moved.
 --
--- The general idea behind this function is that the result of a previous
--- calculation can the passed on to the next function call. This way we can also
--- reuse our RNG seeds for multiple samples.
-render ::
-     Acc (Matrix (V2 Int)) -- ^ Screen pixel coordinates
+-- TODO: Restructure all of this. This can be broken down into multiple steps,
+--       and we can use 'expand' and 'permute' to do stream compaction and then
+--       sum up calculated colors.
+render
+  :: Acc (Matrix (V2 Int)) -- ^ Screen pixel coordinates
   -> Acc (Scalar Camera)
-  -> Acc (Matrix (Color, Word32)) -- ^ Accumulated results and RNG seeds
-  -> Acc (Matrix (Color, Word32)) -- ^ New results and new RNG seeds
+  -> Acc RenderResult -- ^ Accumulated results and RNG seeds
+  -> Acc RenderResult -- ^ New results and new RNG seeds
 render screen camera acc =
   zipWith (\(T2 new seed) (T2 old _) -> T2 (new + old) seed) result acc
-  where
-    rays = primaryRays (the camera) screen
-    seeds = map snd acc
-    result = map (traceRay 15 mainScene) $ zip rays seeds
+ where
+  rays   = primaryRays (the camera) screen
+  seeds  = map snd acc
+  result = map (traceRay 15 mainScene) $ zip rays seeds
 
 -- | Calculate the origin and directions of the primary rays based on a camera
 -- and a matrix of screen pixel positions. These positions should be in the

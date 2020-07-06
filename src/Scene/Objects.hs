@@ -22,6 +22,16 @@ import Data.Typeable
 import Prelude ((<$>))
 import qualified Prelude as P
 
+-- | The result of a computation. This is an array of accumulated color values
+-- for every pixel along with the RNG seed that should be used for the next
+-- iteration. When rendering we simply divide the color value by the number of
+-- iterations run to get an average pixel value (or in cool people's terms,
+-- we're integrating over the illuminance at a single point in the scene).
+--
+-- The RNG seeds should be reseeded periodically since we're using very
+-- rudimentary PRNG algorithms.
+type RenderResult = Matrix (Color, Word32)
+
 -- * Objects
 
 type Point = V3 Float
@@ -80,12 +90,6 @@ data Sphere = Sphere
 -- See the documentation for 'Data.Array.Accelerate' for more information about
 -- these.
 
-{-# COMPLETE Camera_ #-}
-{-# COMPLETE Material_ #-}
-{-# COMPLETE Plane_ #-}
-{-# COMPLETE Ray_ #-}
-{-# COMPLETE Sphere_ #-}
-
 pattern Camera_ :: Exp Point -> Exp Direction -> Exp Int -> Exp Camera
 pattern Camera_ p d f = Pattern (p, d, f)
 
@@ -100,6 +104,12 @@ pattern Ray_ o d = Pattern (o, d)
 
 pattern Sphere_ :: Exp Point -> Exp Float -> Exp Material -> Exp Sphere
 pattern Sphere_ p r m = Pattern (p, r, m)
+
+{-# COMPLETE Camera_ #-}
+{-# COMPLETE Material_ #-}
+{-# COMPLETE Plane_ #-}
+{-# COMPLETE Ray_ #-}
+{-# COMPLETE Sphere_ #-}
 
 -- * Instances
 

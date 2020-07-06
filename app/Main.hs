@@ -40,7 +40,6 @@ import Data.Int (Int32)
 import qualified Data.Text as T
 import qualified Data.Vector.Storable as V
 import Data.Vector.Storable (unsafeWith)
-import Data.Word (Word32)
 import Foreign.C.Types (CInt(..))
 import qualified Graphics.GLUtil as GLU
 import qualified Graphics.Rendering.OpenGL as GL
@@ -53,7 +52,7 @@ import System.Mem (performGC)
 
 import Lib
 import Scene.Trace
-import Scene.Objects (Camera, Color, Direction, Point, rotation')
+import Scene.Objects (Camera, Direction, Point, RenderResult, rotation')
 import Scene.World (initialCamera)
 import TH
 import Util
@@ -61,7 +60,7 @@ import Util
 -- | A compiled rendering function for a specific camera position and
 -- orientation. We store this function next to the other rendering data for
 -- simplicity's sake. See 'compileFor' for more information.
-type CompiledFunction = A.Matrix (Color, Word32) -> A.Matrix (Color, Word32)
+type CompiledFunction = (Int, RenderResult) -> (Int, RenderResult)
 
 -- | The rendering results. The resulting 'Color' matrix should be divided by
 -- the number of iterations in order to obtain the final averaged image.
@@ -70,9 +69,8 @@ type CompiledFunction = A.Matrix (Color, Word32) -> A.Matrix (Color, Word32)
 -- store it next to the other values.
 data Result = Result
   { _resultCompute :: CompiledFunction
-  , _resultTexture :: A.Matrix (Color, Word32)
-  , _resultIterations :: Int
-  , _resultCamera :: Camera
+  , _resultValue   :: (Int, RenderResult)
+  , _resultCamera  :: Camera
   }
 
 makeFields ''Result
@@ -107,8 +105,7 @@ main = do
     newMVar $!
     Result
       { _resultCompute = compute'
-      , _resultTexture = compute' seeds
-      , _resultIterations = 1
+      , _resultValue = compute' (0, seeds)
       , _resultCamera = initialCamera
       }
 
@@ -130,9 +127,11 @@ main = do
 
 -- | Create a function for rendering a single sample based on the current camera
 -- position. This function is meant to be reused until the 'Camera' position
--- gets updated.
+-- gets updated. This way Accelerate does not have to recompile every frame
 compileFor :: A.Scalar Camera -> CompiledFunction
-compileFor = runN render screenPixels
+compileFor !c =
+  let dewit = runN render screenPixels
+  in  \(!iterations, !acc) -> (iterations + 1, dewit c acc)
 
 -- | Perform the actual path tracing. This is done in a seperate thread that
 -- shares and 'MVar' with the rendering thread to prevent one of the processes
@@ -157,17 +156,16 @@ computationLoop mResult =
       -- but it'll reduce the responsiveness of our application. By doing this
       -- only once we reach a certain threshold we can still make use of this
       -- optimization while keeping it responsive.
-      -- TODO: Cap this on based on frame time to prevent the CPU backend from
-      --       getting unreponsive
-      let batchSize = max 30 $ (result ^. iterations) `div` 50
-          !(!iterations', !texture') =
-            if (result ^. iterations) > 100
-              then (batchSize, doTimes batchSize (result ^. compute) $! (result ^. texture))
-              else (1, (result ^. compute) $! (result ^. texture))
-          !result' = result & texture .~ texture' & iterations +~ iterations'
+      -- TODO: Get rid of this hack
+      let batchSize = max 30 $ (result ^. value . _1) `div` 50
+          !value'@(!iterations, !_) =
+            if (result ^. value . _1) > 100
+              then doTimes batchSize (result ^. compute) (result ^. value)
+              else (result ^. compute) (result ^. value)
+          !result' = result & value .~ value'
 
       void $! putMVar mResult $! result'
-      return $! result' ^. iterations
+      return iterations
 
     -- The RNGs should be reseeded every 2000 iterations to prevent convergence
     reseedAt <- get
@@ -176,11 +174,12 @@ computationLoop mResult =
         liftIO $ do
           -- This could potentially reseed an empty rendering result if camera
           -- movement happens exactly between here and the 'lifIO' block above,
-          -- but it won't cause any data races
+          -- but it won't cause any data races. We only have to update the
+          -- texture so we'll leave the first element of the tuple alone.
           result <- takeMVar mResult
-          reseeded <- reseed $ result ^. texture
+          reseeded <- reseed $ result ^. value . _2
 
-          void $! putMVar mResult $! result & texture .~ reseeded
+          void $! putMVar mResult $! result & value . _2 .~ reseeded
         modify (+ reseedInterval)
       else when (currentIterations < reseedInterval) $ put reseedInterval
   where
@@ -279,8 +278,8 @@ inputLoop mResult = time >>= go
                                              & rotation' %~ clampRoll
                                              & translate translation
             compute' = compileFor $ scalar updatedCamera
-            result' = result & iterations .~ 1 & texture .~ compute' emptyOutput
-                             & camera .~ updatedCamera & compute .~ compute'
+            !result' = result & value .~ compute' (0, emptyOutput)
+                              & camera .~ updatedCamera & compute .~ compute'
 
         putMVar mResult $! result'
 
@@ -308,10 +307,11 @@ graphicsLoop window mResult = do
     GL.viewport $=
       (GL.Position 0 0, GL.Size (fromIntegral width) (fromIntegral height))
 
-    -- XXX: This is a LOT faster than using 'A.toList' but I feel dirty even
-    --      looking at it. Is there really not a better way?
     result <- readMVar mResult
-    let (((), ((((), r), g), b)), _) = A.toVectors $ result ^. texture
+
+    let (iterations, texture) = result ^. value
+
+        (((), ((((), r), g), b)), _) = A.toVectors texture
         pixelBuffer = V.zipWith3 V3 r g b
 
     GL.clearColor $= GL.Color4 0.5 0.5 0.5 1.0
@@ -323,7 +323,7 @@ graphicsLoop window mResult = do
       Font.blended
         font
         (V4 255 255 255 255)
-        (T.pack $ show $ result ^. iterations)
+        (T.pack . show $ iterations)
 
     unlockSurface textSurface
     surfaceFillRect textSurface Nothing (V4 0 0 0 0)
@@ -367,8 +367,9 @@ graphicsLoop window mResult = do
     -- bindings use 'Word32' values instead of enums for 'GL.activeTexture'.
     GLU.setUniform program "u_texture" (fromIntegral resultTexUnit :: GL.GLint)
     GLU.setUniform program "u_text" (fromIntegral textTexUnit :: GL.GLint)
+    -- TODO: There has to be a better way to extract this Scalar Int
     GLU.setUniform program "u_iterations"
-      (fromIntegral (result ^. iterations) :: GL.GLint)
+      (fromIntegral iterations :: GL.GLint)
 
     GL.bindVertexArrayObject $= Just vao
     GL.drawArrays GL.Triangles 0 6

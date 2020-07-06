@@ -145,11 +145,12 @@ genSeeds = do
 -- relies on a very simple PRNG. While this is good enough for our use cases,
 -- you can still start to see the RNGs converge if you leave the algorithm
 -- running for long enough.
-reseed :: Matrix (Color, Word32) -> IO (Matrix (Color, Word32))
+--
+-- TODO: Use Vectors instead of lists here
+reseed :: RenderResult -> IO RenderResult
 reseed m =
   fromList screenShape . P.zipWith (\(c, _) s -> (c, s)) old <$> genSeeds
-  where
-    old = toList m
+  where old = toList m
 
 -- ** Mapping and folding over a scene
 --
