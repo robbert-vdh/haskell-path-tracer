@@ -80,24 +80,23 @@ data Sphere = Sphere
 -- See the documentation for 'Data.Array.Accelerate' for more information about
 -- these.
 
--- TODO: Use the new naming convention for these pattersn
 -- TODO: Mark these pattern synonyms as complete, and remove irrefutable
 --       patterns when they are currently used
 
-pattern Camera' :: Exp Point -> Exp Direction -> Exp Int -> Exp Camera
-pattern Camera' p d f = Pattern (p, d, f)
+pattern Camera_ :: Exp Point -> Exp Direction -> Exp Int -> Exp Camera
+pattern Camera_ p d f = Pattern (p, d, f)
 
-pattern Material' :: Exp Color -> Exp Float -> Exp Brdf -> Exp Material
-pattern Material' c i b = Pattern (c, i, b)
+pattern Material_ :: Exp Color -> Exp Float -> Exp Brdf -> Exp Material
+pattern Material_ c i b = Pattern (c, i, b)
 
-pattern Plane' :: Exp Point -> Exp Direction -> Exp Material -> Exp Plane
-pattern Plane' p d m = Pattern (p, d, m)
+pattern Plane_ :: Exp Point -> Exp Direction -> Exp Material -> Exp Plane
+pattern Plane_ p d m = Pattern (p, d, m)
 
-pattern Ray' :: Elt a => Exp (V3 a) -> Exp (V3 a) -> Exp (Ray a)
-pattern Ray' o d = Pattern (o, d)
+pattern Ray_ :: Elt a => Exp (V3 a) -> Exp (V3 a) -> Exp (Ray a)
+pattern Ray_ o d = Pattern (o, d)
 
-pattern Sphere' :: Exp Point -> Exp Float -> Exp Material -> Exp Sphere
-pattern Sphere' p r m = Pattern (p, r, m)
+pattern Sphere_ :: Exp Point -> Exp Float -> Exp Material -> Exp Sphere
+pattern Sphere_ p r m = Pattern (p, r, m)
 
 -- * Instances
 
@@ -115,7 +114,7 @@ instance Lift Exp Material where
 
 instance (Lift Exp a, Elt (Plain a)) => Lift Exp (Ray a) where
   type Plain (Ray a) = Ray (Plain a)
-  lift (Ray o d) = Ray' (lift o) (lift d)
+  lift (Ray o d) = Ray_ (lift o) (lift d)
 
 instance Lift Exp Sphere where
   type Plain Sphere = Sphere
@@ -152,60 +151,60 @@ makeFields ''Scene
 class HasBrdf t a | t -> a where
   brdf :: Getter (Exp t) (Exp a)
 instance HasBrdf Material Brdf where
-  brdf = to $ \(Material' _ _ b) -> b
+  brdf = to $ \(Material_ _ _ b) -> b
 
 class HasColor t a | t -> a where
   color :: Getter (Exp t) (Exp a)
 instance HasColor Material Color where
-  color = to $ \(Material' c _ _) -> c
+  color = to $ \(Material_ c _ _) -> c
 
 class HasDirection t a | t -> a where
   direction :: Getter (Exp t) (Exp a)
 instance HasDirection Plane Direction where
-  direction = to $ \(Plane' _ d _) -> d
+  direction = to $ \(Plane_ _ d _) -> d
 instance Elt a => HasDirection (Ray a) (V3 a) where
-  direction = to $ \(Ray' _ d) -> d
+  direction = to $ \(Ray_ _ d) -> d
 
 class HasFov t a | t -> a where
   fov :: Getter (Exp t) (Exp a)
 instance HasFov Camera Int where
-  fov = to $ \(Camera' _ _ f) -> f
+  fov = to $ \(Camera_ _ _ f) -> f
 
 class HasIlluminance t a | t -> a where
   illuminance :: Getter (Exp t) (Exp a)
 instance HasIlluminance Material Float where
-  illuminance = to $ \(Material' _ i _) -> i
+  illuminance = to $ \(Material_ _ i _) -> i
 
 class HasMaterial t a | t -> a where
   material :: Getter (Exp t) (Exp a)
 instance HasMaterial Plane Material where
-  material = to $ \(Plane' _ _ m) -> m
+  material = to $ \(Plane_ _ _ m) -> m
 instance HasMaterial Sphere Material where
-  material = to $ \(Sphere' _ _ m) -> m
+  material = to $ \(Sphere_ _ _ m) -> m
 
 class HasOrigin t a | t -> a where
   origin :: Getter (Exp t) (Exp a)
 instance Elt a => HasOrigin (Ray a) (V3 a) where
-  origin = to $ \(Ray' o _) -> o
+  origin = to $ \(Ray_ o _) -> o
 
 class HasPosition t a | t -> a where
   position :: Getter (Exp t) (Exp a)
 instance HasPosition Camera Point where
-  position = to $ \(Camera' p _ _) -> p
+  position = to $ \(Camera_ p _ _) -> p
 instance HasPosition Plane Point where
-  position = to $ \(Plane' p _ _) -> p
+  position = to $ \(Plane_ p _ _) -> p
 instance HasPosition Sphere Point where
-  position = to $ \(Sphere' p _ _) -> p
+  position = to $ \(Sphere_ p _ _) -> p
 
 class HasRadius t a | t -> a where
   radius :: Getter (Exp t) (Exp a)
 instance HasRadius Sphere Float where
-  radius = to $ \(Sphere' _ r _) -> r
+  radius = to $ \(Sphere_ _ r _) -> r
 
 class HasRotation t a | t -> a where
   rotation :: Getter (Exp t) (Exp a)
 instance HasRotation Camera Direction where
-  rotation = to $ \(Camera' _ d _) -> d
+  rotation = to $ \(Camera_ _ d _) -> d
 
 -- These two lenses are used for camera movement. As they're the only two lenses
 -- we need that have setters and are not lifted to 'Exp's we'll dimply define

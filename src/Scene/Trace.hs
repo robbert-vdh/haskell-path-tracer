@@ -53,7 +53,7 @@ render screen camera acc =
 -- format @V2 <0 .. screenWidth> <0 .. screenHeight>@.
 primaryRays ::
      Exp Camera -> Acc (Matrix (V2 Int)) -> Acc (Matrix RayF)
-primaryRays ~(Camera' cPos cRot (fromIntegral -> cFov)) = map transform
+primaryRays ~(Camera_ cPos cRot (fromIntegral -> cFov)) = map transform
   where
     -- | The distance between the camera and the virtual screen plane
     screenDistance :: Exp Float
@@ -90,7 +90,7 @@ primaryRays ~(Camera' cPos cRot (fromIntegral -> cFov)) = map transform
           virtualPoint = planeCenter + (planeRightOffset ^* screenX) + (planeTopOffset ^* screenY)
           rayDir :: Exp (V3 Float)
           rayDir = normalize $ virtualPoint - cPos
-       in Ray' cPos rayDir
+       in Ray_ cPos rayDir
 
 -- | Calculate the amount of light that a given ray would collect when shot into
 -- the scene. In other words, calculate what color the pixel that corresponds to
@@ -137,7 +137,7 @@ traceRay limit scene primaryRay =
       -> Exp (Normal, Material)
       -> Exp ((RayF, Word32), Color, V3 Float)
     calculate (T3 (T2 ray seed) result throughput)
-              (T2 ~(Ray' intersection iNormal) iMaterial) =
+              (T2 ~(Ray_ intersection iNormal) iMaterial) =
       let T2 rotationVector nextSeed = genVec seed
 
           nextRayProb = 1 / (pi * 2)
@@ -170,7 +170,7 @@ traceRay limit scene primaryRay =
               ]
               (T2 (V3_ 0.0 0.0 0.0) 0)
 
-          nextRay = Ray' (intersection + nextDirection ^* epsilon) nextDirection
+          nextRay = Ray_ (intersection + nextDirection ^* epsilon) nextDirection
        in T3
             (T2 nextRay nextSeed)
             (result + (emittance * throughput))
