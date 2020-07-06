@@ -271,7 +271,7 @@ inputLoop mResult = time >>= go
                                              & rotation' %~ clampRoll
                                              & translate translation
             compute' = compileFor $ scalar updatedCamera
-            result' = result & iterations .~ 1 & texture .~ emptyOutput
+            result' = result & iterations .~ 1 & texture .~ compute' emptyOutput
                              & camera .~ updatedCamera & compute .~ compute'
 
         putMVar mResult $! result'
