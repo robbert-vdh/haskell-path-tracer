@@ -290,8 +290,12 @@ graphicsLoop window mResult = do
   void $ glCreateContext window
   (program, vao) <- initResources
 
+  -- Right now the window is not resizable so we can just create the surface
+  -- once and then forget about it
+  V2 width height <- SDL.get $ windowSize window
+  textSurface <- createRGBSurface (V2 width height) RGBA8888
+
   forever $ do
-    V2 width height <- SDL.get $ windowSize window
     let textureSize = GL.TextureSize2D screenWidth screenHeight
     GL.viewport $=
       (GL.Position 0 0, GL.Size (fromIntegral width) (fromIntegral height))
@@ -307,16 +311,19 @@ graphicsLoop window mResult = do
 
     -- We'll render the number of iterations (and any other text) to an SDL
     -- surface, which we can then transfer to a GPU buffer.
-    textSurface <- createRGBSurface (V2 width height) RGBA8888
     iterationSurface <-
       Font.blended
         font
         (V4 255 255 255 255)
         (T.pack $ show $ result ^. iterations)
+
+    unlockSurface textSurface
+    surfaceFillRect textSurface Nothing (V4 0 0 0 0)
     void $! surfaceBlit iterationSurface Nothing textSurface (Just (P $ V2 10 0))
+    freeSurface iterationSurface
+    lockSurface textSurface
 
     GL.activeTexture $= GL.TextureUnit textTexUnit
-    lockSurface textSurface
     textPixels <- surfacePixels textSurface
     GL.texImage2D
       GL.Texture2D
