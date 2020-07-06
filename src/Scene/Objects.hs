@@ -80,8 +80,11 @@ data Sphere = Sphere
 -- See the documentation for 'Data.Array.Accelerate' for more information about
 -- these.
 
--- TODO: Mark these pattern synonyms as complete, and remove irrefutable
---       patterns when they are currently used
+{-# COMPLETE Camera_ #-}
+{-# COMPLETE Material_ #-}
+{-# COMPLETE Plane_ #-}
+{-# COMPLETE Ray_ #-}
+{-# COMPLETE Sphere_ #-}
 
 pattern Camera_ :: Exp Point -> Exp Direction -> Exp Int -> Exp Camera
 pattern Camera_ p d f = Pattern (p, d, f)

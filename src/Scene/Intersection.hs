@@ -27,7 +27,7 @@ class Primitive p where
 
   default hit :: HasMaterial p Material =>
     Exp RayF -> Exp Float -> Exp p -> Exp (Normal, Material)
-  hit ~(Ray_ o d) t p =
+  hit (Ray_ o d) t p =
     T2 (Ray_ hitPosition (normal hitPosition p)) (p ^. material)
     where
       hitPosition = o + (d ^* t)
@@ -37,7 +37,7 @@ instance Primitive Sphere where
   -- in the scratchpixel tutorial
   --
   -- https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-sphere-intersection
-  distanceTo ~(Ray_ ori dir) ~(Sphere_ pos rad _) =
+  distanceTo (Ray_ ori dir) ~(Sphere_ pos rad _) =
     if tca < 0 || d2 > (rad ** 2) || t < 0
       then nothing
       else just t
@@ -50,14 +50,14 @@ instance Primitive Sphere where
       t1 = tca + thc
       t = min t0 t1
 
-  normal pos ~(Sphere_ ori _ _) = normalize (pos - ori)
+  normal pos (Sphere_ ori _ _) = normalize (pos - ori)
 
 instance Primitive Plane where
   -- | Calculate distance to plane, implemented in the same manner
   -- as in the scratchpixel tutorial.
   --
   -- https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-plane-and-ray-disk-intersection
-  distanceTo ~(Ray_ ori dir) ~(Plane_ pos nor _) =
+  distanceTo (Ray_ ori dir) ~(Plane_ pos nor _) =
     if denom > 1e-6 || dist < 0
       then nothing
       else just dist
@@ -65,4 +65,4 @@ instance Primitive Plane where
       denom = dir `dot` nor
       dist = ((pos - ori) `dot` nor) / denom
 
-  normal _ ~(Plane_ _ nor _) = nor
+  normal _ (Plane_ _ nor _) = nor

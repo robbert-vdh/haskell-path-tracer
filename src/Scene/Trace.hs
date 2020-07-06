@@ -53,7 +53,7 @@ render screen camera acc =
 -- format @V2 <0 .. screenWidth> <0 .. screenHeight>@.
 primaryRays ::
      Exp Camera -> Acc (Matrix (V2 Int)) -> Acc (Matrix RayF)
-primaryRays ~(Camera_ cPos cRot (fromIntegral -> cFov)) = map transform
+primaryRays (Camera_ cPos cRot (fromIntegral -> cFov)) = map transform
   where
     -- | The distance between the camera and the virtual screen plane
     screenDistance :: Exp Float
@@ -137,7 +137,7 @@ traceRay limit scene primaryRay =
       -> Exp (Normal, Material)
       -> Exp ((RayF, Word32), Color, V3 Float)
     calculate (T3 (T2 ray seed) result throughput)
-              (T2 ~(Ray_ intersection iNormal) iMaterial) =
+              (T2 (Ray_ intersection iNormal) iMaterial) =
       let T2 rotationVector nextSeed = genVec seed
 
           nextRayProb = 1 / (pi * 2)

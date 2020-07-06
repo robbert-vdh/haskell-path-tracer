@@ -45,7 +45,7 @@ anglesToDirection angles =
 -- conversion was copied from
 -- https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles#Source_Code.
 anglesToQuaternion :: Exp Direction -> Exp (Quaternion Float)
-anglesToQuaternion ~(V3_ roll pitch yaw) =
+anglesToQuaternion (V3_ roll pitch yaw) =
   Quaternion_ (cy' * cp' * cr' + sy' * sp' * sr') $
   V3_
     (cy' * cp' * sr' - sy' * sp' * cr')
@@ -84,7 +84,7 @@ translate delta camera = camera & position' +~ translation
 -- function in 'Linear.V4' that has the same signature, but it also normalizes
 -- based on the @w@ coordinate causing vectors (with @w = 0@) to become NaN.
 fromHomogeneous :: Elt a => Exp (V4 a) -> Exp (V3 a)
-fromHomogeneous ~(V4_ x y z _) = V3_ x y z
+fromHomogeneous (V4_ x y z _) = V3_ x y z
 
 -- | The world's 'forward' direction. This is the direction the camera looks
 -- into when it has not been rotated.
