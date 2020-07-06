@@ -20,7 +20,7 @@ import Data.Array.Accelerate.Linear as A
 import Data.Typeable
 
 import Prelude ((<$>))
-import qualified Prelude
+import qualified Prelude as P
 
 -- * Objects
 
@@ -40,24 +40,24 @@ data Camera = Camera
   , _cameraRotation :: Direction
   -- | The camera's horizontal field of view in degrees.
   , _cameraFov :: Int
-  } deriving (Prelude.Eq, Show, Generic, Elt)
+  } deriving (P.Eq, Show, Generic, Elt)
 
 data Brdf
   = Diffuse {-# UNPACK #-} Float
   | Glossy {-# UNPACK #-} Float
-  deriving (Prelude.Eq, Show, Typeable)
+  deriving (P.Eq, Show, Typeable)
 
 data Material = Material
   { _materialColor :: {-# UNPACK #-} Color
   , _materialIlluminance :: {-# UNPACK #-} Float
   , _materialBrdf :: Brdf
-  } deriving (Prelude.Eq, Show, Generic, Elt)
+  } deriving (P.Eq, Show, Generic, Elt)
 
 data Plane = Plane
   { _planePosition :: {-# UNPACK #-} Point
   , _planeDirection :: {-# UNPACK #-} Direction
   , _planeMaterial :: Material
-  } deriving (Prelude.Eq, Show, Generic, Elt)
+  } deriving (P.Eq, Show, Generic, Elt)
 
 -- | Any ray that is cast through the scene. This is defined as a type alias as
 -- the 'Ray' has to be polymorphic in order to to be able to lift a @Ray (Exp
@@ -67,13 +67,13 @@ type RayF = Ray Float
 data Ray a = Ray
   { _rayOrigin :: V3 a
   , _rayDirection :: V3 a
-  } deriving (Prelude.Eq, Show, Generic, Elt)
+  } deriving (P.Eq, Show, Generic, Elt)
 
 data Sphere = Sphere
   { _spherePosition :: {-# UNPACK #-} Point
   , _sphereRadius :: {-# UNPACK #-} Float
   , _sphereMaterial :: {-# UNPACK #-} Material
-  } deriving (Prelude.Eq, Show, Generic, Elt)
+  } deriving (P.Eq, Show, Generic, Elt)
 
 -- * Pattern synonyms
 --
