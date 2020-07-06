@@ -30,9 +30,8 @@ module Main where
 
 import Control.Concurrent
 import Control.Lens
-import Control.Monad (forM_, forever, unless, void, when)
 import Control.Monad.IO.Class
-import Control.Monad.Trans.State.Strict
+import Control.Monad.State.Strict
 import qualified Data.Array.Accelerate as A
 import qualified Data.Array.Accelerate.IO.Data.Vector.Storable as A
 import Data.ByteString.Char8 (ByteString)

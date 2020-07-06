@@ -10,7 +10,7 @@
 module Util where
 
 import Control.Monad (replicateM)
-import Control.Monad.Trans.State.Strict (runState, state)
+import Control.Monad.State.Strict (runState, state)
 import Data.Array.Accelerate as A hiding (pattern V2, pattern V3)
 import qualified Data.Array.Accelerate.Array.Sugar as S
 import Data.Array.Accelerate.Control.Lens
