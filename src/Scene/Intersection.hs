@@ -7,12 +7,12 @@
 -- primitives.
 module Scene.Intersection where
 
-import Data.Array.Accelerate
-import Data.Array.Accelerate.Control.Lens
-import Data.Array.Accelerate.Data.Maybe
-import Data.Array.Accelerate.Linear
+import           Data.Array.Accelerate
+import           Data.Array.Accelerate.Control.Lens
+import           Data.Array.Accelerate.Data.Maybe
+import           Data.Array.Accelerate.Linear
 
-import Scene.Objects
+import           Scene.Objects
 
 class Primitive p where
   -- | Distance to the primitive if it intersects. Returns a 'Just t' if ray
@@ -38,31 +38,28 @@ instance Primitive Sphere where
   --
   -- https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-sphere-intersection
   distanceTo (Ray_ ori dir) ~(Sphere_ pos rad _) =
-    if tca < 0 || d2 > (rad ** 2) || t < 0
-      then nothing
-      else just t
-    where
-      l   = pos - ori
-      tca = l `dot` dir
-      d2  = (l `dot` l) - (tca * tca)
-      thc = sqrt (rad ** 2 - d2)
-      t0 = tca - thc
-      t1 = tca + thc
-      t = min t0 t1
+    if tca < 0 || d2 > (rad ** 2) || t < 0 then nothing else just t
+   where
+    l   = pos - ori
+    tca = l `dot` dir
+    d2  = (l `dot` l) - (tca * tca)
+    thc = sqrt (rad ** 2 - d2)
+    t0  = tca - thc
+    t1  = tca + thc
+    t   = min t0 t1
 
   normal pos (Sphere_ ori _ _) = normalize (pos - ori)
 
 instance Primitive Plane where
-  -- | Calculate distance to plane, implemented in the same manner
-  -- as in the scratchpixel tutorial.
+  -- | Calculate distance to plane, implemented in the same manner as in the
+  -- scratchpixel tutorial.
   --
   -- https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-plane-and-ray-disk-intersection
-  distanceTo (Ray_ ori dir) ~(Plane_ pos nor _) =
-    if denom > 1e-6 || dist < 0
-      then nothing
-      else just dist
-    where
-      denom = dir `dot` nor
-      dist = ((pos - ori) `dot` nor) / denom
+  distanceTo (Ray_ ori dir) ~(Plane_ pos nor _) = if denom > 1e-6 || dist < 0
+    then nothing
+    else just dist
+   where
+    denom = dir `dot` nor
+    dist  = ((pos - ori) `dot` nor) / denom
 
   normal _ (Plane_ _ nor _) = nor

@@ -6,25 +6,35 @@
 {-# LANGUAGE ViewPatterns #-}
 
 -- | Small utility functions for conversions.
-
 module Util where
 
-import Control.Monad (replicateM)
-import Control.Monad.State.Strict (runState, state)
-import Data.Array.Accelerate as A hiding (pattern V2, pattern V3)
-import qualified Data.Array.Accelerate.Array.Sugar as S
-import Data.Array.Accelerate.Control.Lens
-import Data.Array.Accelerate.Data.Functor as A hiding ((<$>))
-import Data.Array.Accelerate.Linear as A
-import qualified System.Random.MWC as Rng
-import qualified Linear as L
+import           Control.Monad                  ( replicateM )
+import           Control.Monad.State.Strict     ( runState
+                                                , state
+                                                )
+import           Data.Array.Accelerate         as A
+                                         hiding ( pattern V2
+                                                , pattern V3
+                                                )
+import qualified Data.Array.Accelerate.Array.Sugar
+                                               as S
+import           Data.Array.Accelerate.Control.Lens
+import           Data.Array.Accelerate.Data.Functor
+                                               as A
+                                         hiding ( (<$>) )
+import           Data.Array.Accelerate.Linear  as A
+import qualified System.Random.MWC             as Rng
+import qualified Linear                        as L
 
-import qualified Data.List as P
-import Prelude ((<$>), (<*>), IO)
-import qualified Prelude as P
+import qualified Data.List                     as P
+import           Prelude                        ( (<$>)
+                                                , (<*>)
+                                                , IO
+                                                )
+import qualified Prelude                       as P
 
-import Scene.Intersection
-import Scene.Objects
+import           Scene.Intersection
+import           Scene.Objects
 
 -- * Functions
 -- ** Accelerate
@@ -46,39 +56,36 @@ anglesToDirection angles =
 -- https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles#Source_Code.
 anglesToQuaternion :: Exp Direction -> Exp (Quaternion Float)
 anglesToQuaternion (V3_ roll pitch yaw) =
-  Quaternion_ (cy' * cp' * cr' + sy' * sp' * sr') $
-  V3_
+  Quaternion_ (cy' * cp' * cr' + sy' * sp' * sr') $ V3_
     (cy' * cp' * sr' - sy' * sp' * cr')
     (sy' * cp' * sr' + cy' * sp' * cr')
     (sy' * cp' * cr' - cy' * sp' * sr')
-  where
-    cy' = cos $ yaw * 0.5
-    sy' = sin $ yaw * 0.5
-    cp' = cos $ pitch * 0.5
-    sp' = sin $ pitch * 0.5
-    cr' = cos $ roll * 0.5
-    sr' = sin $ roll * 0.5
+ where
+  cy' = cos $ yaw * 0.5
+  sy' = sin $ yaw * 0.5
+  cp' = cos $ pitch * 0.5
+  sp' = sin $ pitch * 0.5
+  cr' = cos $ roll * 0.5
+  sr' = sin $ roll * 0.5
 
 -- | Convert an unnormalized euler axis rotation vector into a 'Quaternion'.
 anglesToQuaternion' :: Direction -> Quaternion Float
 anglesToQuaternion' (V3 roll pitch yaw) =
-  Quaternion (cy * cp * cr + sy * sp * sr) $
-  V3
-    (cy * cp * sr - sy * sp * cr)
-    (sy * cp * sr + cy * sp * cr)
-    (sy * cp * cr - cy * sp * sr)
-  where
-    cy = cos $ yaw * 0.5
-    sy = sin $ yaw * 0.5
-    cp = cos $ pitch * 0.5
-    sp = sin $ pitch * 0.5
-    cr = cos $ roll * 0.5
-    sr = sin $ roll * 0.5
+  Quaternion (cy * cp * cr + sy * sp * sr) $ V3 (cy * cp * sr - sy * sp * cr)
+                                                (sy * cp * sr + cy * sp * cr)
+                                                (sy * cp * cr - cy * sp * sr)
+ where
+  cy = cos $ yaw * 0.5
+  sy = sin $ yaw * 0.5
+  cp = cos $ pitch * 0.5
+  sp = sin $ pitch * 0.5
+  cr = cos $ roll * 0.5
+  sr = sin $ roll * 0.5
 
 translate :: Direction -> Camera -> Camera
 translate delta camera = camera & position' +~ translation
-  where
-    translation = L.rotate (anglesToQuaternion' $ camera ^. rotation') delta
+ where
+  translation = L.rotate (anglesToQuaternion' $ camera ^. rotation') delta
 
 -- | Transform homogeneous coordinates back into regular vectors. There is a
 -- function in 'Linear.V4' that has the same signature, but it also normalizes
@@ -98,8 +105,8 @@ upVector = V3 0.0 1.0 0.0
 
 -- | Convert an integer vector to a float vector. This is only used when
 -- converting between rasterization and world spaces.
-vecToFloat ::
-     (Functor f, Elt (f Int), Elt (f Float)) => Exp (f Int) -> Exp (f Float)
+vecToFloat
+  :: (Functor f, Elt (f Int), Elt (f Float)) => Exp (f Int) -> Exp (f Float)
 vecToFloat = fmap toFloating
 
 -- ** RNG
@@ -118,20 +125,19 @@ genFloat = P.uncurry T2 . genFloat'
 -- can use the state monad to thread the seed to multiple calculations.
 genFloat' :: Exp Word32 -> (Exp Float, Exp Word32)
 genFloat' seed = (nextFloat, nextSeed)
-  where
-    multiplier = 1664525
-    increment = 1013904223
+ where
+  multiplier = 1664525
+  increment  = 1013904223
 
-    -- We use 2^32 as a modulus so we can simply let the result wrap around
-    nextSeed = (multiplier * seed) + increment
-    nextFloat = fromIntegral nextSeed / (2 ** 31) - 1
+  -- We use 2^32 as a modulus so we can simply let the result wrap around
+  nextSeed   = (multiplier * seed) + increment
+  nextFloat  = fromIntegral nextSeed / (2 ** 31) - 1
 
 -- | Generate a random vector whose three values are in the range @[-1, 1]@.
 -- This value can be used to create a quaternion for rotation a vector.
 genVec :: Exp Word32 -> Exp (V3 Float, Word32)
 genVec seed = P.uncurry T2 $ runState (V3_ <$> rng <*> rng <*> rng) seed
-  where
-    rng = state genFloat'
+  where rng = state genFloat'
 
 -- | Create a RNG seed for every screen pixel. This function is used when
 -- resetting the rendering texture and when reseeding the RNGs.
@@ -171,12 +177,8 @@ reseed m =
 -- than they should be.
 
 -- | Map a function over every object in a scene.
-mapScene ::
-     Elt a
-  => (forall p. Primitive p =>
-                  Exp p -> Exp a)
-  -> Scene
-  -> [Exp a]
+mapScene
+  :: Elt a => (forall p . Primitive p => Exp p -> Exp a) -> Scene -> [Exp a]
 mapScene f (Scene s p) = P.map f s P.++ P.map f p
 
 -- | Determines whether the predicate returns 'True' for any value in the list.
@@ -191,16 +193,13 @@ expMin = expMinWith P.id
 -- definition here is a bit ugly, but I was not sure whether Haskell's laziness
 -- would transfer over to the comopiled program.
 expMinWith :: (Ord b, Elt a) => (Exp a -> Exp b) -> [Exp a] -> Exp a
-expMinWith _ [] = error "Invalid call to 'expMinWith'"
-expMinWith _ [x] = x
-expMinWith f (x:xs) =
-  fst $
-  P.foldl'
-    (\a@(T2 _ valA) (calcKey -> b@(T2 _ valB)) -> cond (valA <= valB) a b)
-    (calcKey x)
-    xs
-  where
-    calcKey a = T2 a (f a)
+expMinWith _ []       = error "Invalid call to 'expMinWith'"
+expMinWith _ [x     ] = x
+expMinWith f (x : xs) = fst $ P.foldl'
+  (\a@(T2 _ valA) (calcKey -> b@(T2 _ valB)) -> cond (valA <= valB) a b)
+  (calcKey x)
+  xs
+  where calcKey a = T2 a (f a)
 
 -- * Definitions
 

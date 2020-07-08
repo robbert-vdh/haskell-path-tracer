@@ -28,34 +28,43 @@
 -- using only a single 'Result' object wrapped in an 'MVar'.
 module Main where
 
-import Control.Concurrent
-import Control.Lens
-import Control.Monad.IO.Class
-import Control.Monad.State.Strict
-import qualified Data.Array.Accelerate as A
-import qualified Data.Array.Accelerate.IO.Data.Vector.Storable as A
-import Data.ByteString.Char8 (ByteString)
-import qualified Data.ByteString.Char8 as BS
-import Data.Int (Int32)
-import qualified Data.Text as T
-import qualified Data.Vector.Storable as V
-import Data.Vector.Storable (unsafeWith)
-import Foreign.C.Types (CInt(..))
-import qualified Graphics.GLUtil as GLU
-import qualified Graphics.Rendering.OpenGL as GL
-import SDL hiding (Point, get, translation)
-import qualified SDL.Font as Font
+import           Control.Concurrent
+import           Control.Lens
+import           Control.Monad.IO.Class
+import           Control.Monad.State.Strict
+import qualified Data.Array.Accelerate         as A
+import qualified Data.Array.Accelerate.IO.Data.Vector.Storable
+                                               as A
+import           Data.ByteString.Char8          ( ByteString )
+import qualified Data.ByteString.Char8         as BS
+import           Data.Int                       ( Int32 )
+import qualified Data.Text                     as T
+import qualified Data.Vector.Storable          as V
+import           Data.Vector.Storable           ( unsafeWith )
+import           Foreign.C.Types                ( CInt(..) )
+import qualified Graphics.GLUtil               as GLU
+import qualified Graphics.Rendering.OpenGL     as GL
+import           SDL                     hiding ( Point
+                                                , get
+                                                , translation
+                                                )
+import qualified SDL.Font                      as Font
 import qualified SDL
-import System.IO
-import System.IO.Temp
-import System.Mem (performGC)
+import           System.IO
+import           System.IO.Temp
+import           System.Mem                     ( performGC )
 
 import qualified Files
-import Lib
-import Scene.Trace
-import Scene.Objects (Camera, Direction, Point, RenderResult, rotation')
-import Scene.World (initialCamera)
-import Util
+import           Lib
+import           Scene.Trace
+import           Scene.Objects                  ( Camera
+                                                , Direction
+                                                , Point
+                                                , RenderResult
+                                                , rotation'
+                                                )
+import           Scene.World                    ( initialCamera )
+import           Util
 
 -- | A compiled rendering function for a specific camera position and
 -- orientation. We store this function next to the other rendering data for
@@ -90,24 +99,20 @@ main = do
   initializeAll
   Font.initialize
 
-  window <-
-    createWindow "Leipe Mocro Tracer" $
-    defaultWindow
-      -- We'll only grab the mouse input when the right button is pressed
-      { windowInputGrabbed = False
-      , windowInitialSize = V2 (CInt screenWidth) (CInt screenHeight)
-      , windowGraphicsContext = OpenGLContext $ defaultOpenGL {glProfile = Core Normal 3 3}
-      }
+  window <- createWindow "Leipe Mocro Tracer" $ defaultWindow
+    { -- We'll only grab the mouse input when the right button is pressed
+      windowInputGrabbed    = False
+    , windowInitialSize     = V2 (CInt screenWidth) (CInt screenHeight)
+    , windowGraphicsContext = OpenGLContext
+                                $ defaultOpenGL { glProfile = Core Normal 3 3 }
+    }
 
   let compute' = compileFor $ scalar initialCamera
-  seeds <- initialOutput
-  mResult <-
-    newMVar $!
-    Result
-      { _resultCompute = compute'
-      , _resultValue = compute' (0, seeds)
-      , _resultCamera = initialCamera
-      }
+  seeds   <- initialOutput
+  mResult <- newMVar $! Result { _resultCompute = compute'
+                               , _resultValue   = compute' (0, seeds)
+                               , _resultCamera  = initialCamera
+                               }
 
   putStrLn ""
   putStrLn "          Camera Controls"
@@ -119,7 +124,7 @@ main = do
   putStrLn ""
 
   computationThreadId <- forkOS $ computationLoop mResult
-  graphicsThreadId <- forkOS $ graphicsLoop window mResult
+  graphicsThreadId    <- forkOS $ graphicsLoop window mResult
   inputLoop mResult
 
   killThread graphicsThreadId
@@ -139,191 +144,174 @@ compileFor !c =
 --
 -- We use a 'State' monad here to keep track of when we should reseed our RNGs.
 computationLoop :: MVar Result -> IO ()
-computationLoop mResult =
-  flip evalStateT reseedInterval $ forever $ do
-    currentIterations <- liftIO $ do
-      -- Force the GC every iteration. This should not hurt performance, but it
-      -- will somewhat prevent VRAM usage from skyrocketing since we're doing
-      -- hundreds to thousands of calculations per second and the GC won't be
-      -- able to keep up otherwise
-      -- TODO: Maybe just add this as part of 'compileFor' if it really does not
-      --       have any negative impacts
-      performGC
+computationLoop mResult = flip evalStateT reseedInterval $ forever $ do
+  currentIterations <- liftIO $ do
+    -- Force the GC every iteration. This should not hurt performance, but it
+    -- will somewhat prevent VRAM usage from skyrocketing since we're doing
+    -- hundreds to thousands of calculations per second and the GC won't be
+    -- able to keep up otherwise
+    -- TODO: Maybe just add this as part of 'compileFor' if it really does not
+    --       have any negative impacts
+    performGC
 
-      result <- takeMVar mResult
+    result <- takeMVar mResult
 
-      -- We can gain some performance by calculating multiple samples at once,
-      -- but it'll reduce the responsiveness of our application. By doing this
-      -- only once we reach a certain threshold we can still make use of this
-      -- optimization while keeping it responsive.
-      -- TODO: Get rid of this hack
-      let batchSize = max 30 $ (result ^. value . _1) `div` 50
-          value'@(!iterations, !_) =
-            if (result ^. value . _1) > 100
-              then doTimes batchSize (result ^. compute) (result ^. value)
-              else (result ^. compute) (result ^. value)
-          !result' = result & value .~ value'
+    -- We can gain some performance by calculating multiple samples at once, but
+    -- it'll reduce the responsiveness of our application. By doing this only
+    -- once we reach a certain threshold we can still make use of this
+    -- optimization while keeping it responsive.
+    -- TODO: Get rid of this hack
+    let batchSize                = max 30 $ (result ^. value . _1) `div` 50
+        value'@(!iterations, !_) = if (result ^. value . _1) > 100
+          then doTimes batchSize (result ^. compute) (result ^. value)
+          else (result ^. compute) (result ^. value)
+        !result' = result & value .~ value'
 
-      void $! putMVar mResult $! result'
-      return iterations
+    void $! putMVar mResult $! result'
+    return iterations
 
-    -- The RNGs should be reseeded every 2000 iterations to prevent convergence
-    reseedAt <- get
-    if currentIterations > reseedAt
-      then do
-        liftIO $ do
-          -- This could potentially reseed an empty rendering result if camera
-          -- movement happens exactly between here and the 'lifIO' block above,
-          -- but it won't cause any data races. We only have to update the
-          -- texture so we'll leave the first element of the tuple alone.
-          result <- takeMVar mResult
-          reseeded <- reseed $ result ^. value . _2
+  -- The RNGs should be reseeded every 2000 iterations to prevent convergence
+  reseedAt <- get
+  if currentIterations > reseedAt
+    then do
+      liftIO $ do
+        -- This could potentially reseed an empty rendering result if camera
+        -- movement happens exactly between here and the 'lifIO' block above,
+        -- but it won't cause any data races. We only have to update the texture
+        -- so we'll leave the first element of the tuple alone.
+        result   <- takeMVar mResult
+        reseeded <- reseed $ result ^. value . _2
 
-          void $! putMVar mResult $! result & value . _2 .~ reseeded
-        modify (+ reseedInterval)
-      else when (currentIterations < reseedInterval) $ put reseedInterval
-  where
-    -- | How many samples we can render before we have to reseed the RNGs
-    reseedInterval :: Int
-    reseedInterval = 2000
-    -- | Compose a function with itself @n@ times.
-    doTimes :: Int -> (a -> a) -> a -> a
-    doTimes n f = (!! n) . iterate f
+        void $! putMVar mResult $! result & value . _2 .~ reseeded
+      modify (+ reseedInterval)
+    else when (currentIterations < reseedInterval) $ put reseedInterval
+ where
+  -- | How many samples we can render before we have to reseed the RNGs
+  reseedInterval :: Int
+  reseedInterval = 2000
+  -- | Compose a function with itself @n@ times.
+  doTimes :: Int -> (a -> a) -> a -> a
+  doTimes n f = (!! n) . iterate f
 
 -- | Handle the user input. The 'Result' 'MVar' gets updated whenever the camera
 -- gets moved. This should be run in the main thread, since quitting the
 -- application will end this action.
 inputLoop :: MVar Result -> IO ()
 inputLoop mResult = time >>= go
-  where
-    initialDeltas :: (Point, Direction)
-    initialDeltas = (V3 0.0 0.0 0.0, V3 0.0 0.0 0.0)
+ where
+  initialDeltas :: (Point, Direction)
+  initialDeltas = (V3 0.0 0.0 0.0, V3 0.0 0.0 0.0)
 
-    -- | Cap the camera rotation's roll (the vertical rotation). Otherwise
-    -- continuously rotating the camera upwards results in some wierd behaviour.
-    clampRoll :: Direction -> Direction
-    clampRoll (V3 roll pitch yaw) =
-      V3 (min maxRoll $ max minRoll roll) pitch yaw
-      where
-        minRoll = negate pi / 2 + 0.001
-        maxRoll = pi / 2 - 0.001
+  -- | Cap the camera rotation's roll (the vertical rotation). Otherwise
+  -- continuously rotating the camera upwards results in some wierd behaviour.
+  clampRoll :: Direction -> Direction
+  clampRoll (V3 roll pitch yaw) = V3 (min maxRoll $ max minRoll roll) pitch yaw
+   where
+    minRoll = negate pi / 2 + 0.001
+    maxRoll = pi / 2 - 0.001
 
-    go :: Float -> IO ()
-    go lastFrame = do
-      events <- map eventPayload <$> pollEvents
+  go :: Float -> IO ()
+  go lastFrame = do
+    events             <- map eventPayload <$> pollEvents
 
-      currentFrame <- time
-      keyDown <- getKeyboardState
-      allowMouseMovement <- (==) RelativeLocation <$> getMouseLocationMode
-      let elapsed = currentFrame - lastFrame
-          movementDistance =
-            movementSpeed * elapsed *
-            if keyDown ScancodeLShift
-              then 1
-              else 0.25
-          shouldQuit =
-            QuitEvent `elem` events || keyDown ScancodeQ || keyDown ScancodeEscape
+    currentFrame       <- time
+    keyDown            <- getKeyboardState
+    allowMouseMovement <- (==) RelativeLocation <$> getMouseLocationMode
+    let elapsed = currentFrame - lastFrame
+        movementDistance =
+          movementSpeed * elapsed * if keyDown ScancodeLShift then 1 else 0.25
+        shouldQuit =
+          QuitEvent `elem` events || keyDown ScancodeQ || keyDown ScancodeEscape
 
-      -- Camera movement
-      -- We use the 'State' monad to accumulate camera movements before processing
-      -- them to prevent unneeded camera updates.
-      !deltas <- flip execStateT initialDeltas $ do
-        forM_ events
-          (\case
-            -- The right mouse button enables mouse look. SDL's relative mouse
-            -- location mode also implicitely hides the cursor and enables
-            -- window grab.
-            MouseButtonEvent MouseButtonEventData { mouseButtonEventButton = ButtonRight
-                                                  , mouseButtonEventMotion = motion
-                                                  , ..
-                                                  } ->
-              void $ setMouseLocationMode $ if motion == Pressed
-                then RelativeLocation
-                else AbsoluteLocation
-            -- Mouse movement should only be precessed while the right mouse
-            -- button is being held down
-            MouseMotionEvent MouseMotionEventData { mouseMotionEventRelMotion =
-                                                      V2 (adjustSensitivity -> dx)
-                                                         (adjustSensitivity -> dy)
-                                                  , ..
-                                                  } | allowMouseMovement ->
-              modify $ \(t, r) -> (t, r + V3 dy dx 0.0)
-            _ -> return ())
+    -- Camera movement
+    -- We use the 'State' monad to accumulate camera movements before processing
+    -- them to prevent unneeded camera updates.
+    !deltas <- flip execStateT initialDeltas $ do
+      forM_
+        events
+        (\case
+          -- The right mouse button enables mouse look. SDL's relative mouse
+          -- location mode also implicitely hides the cursor and enables window
+          -- grab.
+          MouseButtonEvent MouseButtonEventData { mouseButtonEventButton = ButtonRight, mouseButtonEventMotion = motion, ..}
+            -> void $ setMouseLocationMode $ if motion == Pressed
+              then RelativeLocation
+              else AbsoluteLocation
+          -- Mouse movement should only be precessed while the right mouse
+          -- button is being held down
+          MouseMotionEvent MouseMotionEventData { mouseMotionEventRelMotion = V2 (adjustSensitivity -> dx) (adjustSensitivity -> dy), ..}
+            | allowMouseMovement
+            -> modify $ \(t, r) -> (t, r + V3 dy dx 0.0)
+          _ -> return ()
+        )
 
-        when (keyDown ScancodeW) $
-          modify $ \(t, r) -> (t + V3 0.0 0.0 (-1.0), r)
-        when (keyDown ScancodeS) $
-          modify $ \(t, r) -> (t + V3 0.0 0.0 1.0, r)
-        when (keyDown ScancodeA) $
-          modify $ \(t, r) -> (t + V3 (-1.0) 0.0 0.0, r)
-        when (keyDown ScancodeD) $
-          modify $ \(t, r) -> (t + V3 1.0 0.0 0.0, r)
-        when (keyDown ScancodeLCtrl) $
-          modify $ \(t, r) -> (t + V3 0.0 (-1.0) 0.0, r)
-        when (keyDown ScancodeSpace) $
-          modify $ \(t, r) -> (t + V3 0.0 1.0 0.0, r)
+      when (keyDown ScancodeW) $ modify $ \(t, r) -> (t + V3 0.0 0.0 (-1.0), r)
+      when (keyDown ScancodeS) $ modify $ \(t, r) -> (t + V3 0.0 0.0 1.0, r)
+      when (keyDown ScancodeA) $ modify $ \(t, r) -> (t + V3 (-1.0) 0.0 0.0, r)
+      when (keyDown ScancodeD) $ modify $ \(t, r) -> (t + V3 1.0 0.0 0.0, r)
+      when (keyDown ScancodeLCtrl) $ modify $ \(t, r) -> (t + V3 0.0 (-1.0) 0.0, r)
+      when (keyDown ScancodeSpace) $ modify $ \(t, r) -> (t + V3 0.0 1.0 0.0, r)
 
-      -- We should update the camera only when we receive user input. If the
-      -- camera does get moved, we should reset the current result.
-      when (deltas /= initialDeltas) $ do
-        emptyOutput <- initialOutput
-        result <- takeMVar mResult
+    -- We should update the camera only when we receive user input. If the
+    -- camera does get moved, we should reset the current result.
+    when (deltas /= initialDeltas) $ do
+      emptyOutput <- initialOutput
+      result      <- takeMVar mResult
 
-        -- The distance the camera moves depends on the time elapsed since the
-        -- last frame and whether the shift key is being held down. We'll
-        -- normalize the distance here so that strafing while moving forward
-        -- moves you the same distance as moving in only one direction would.
-        let (\v -> normalize v ^* movementDistance -> translation, rotation) = deltas
-            updatedCamera = result ^. camera & rotation' +~ rotation
-                                             & rotation' %~ clampRoll
-                                             & translate translation
-            compute' = compileFor $ scalar updatedCamera
-            !result' = result & value .~ compute' (0, emptyOutput)
-                              & camera .~ updatedCamera & compute .~ compute'
+      -- The distance the camera moves depends on the time elapsed since the
+      -- last frame and whether the shift key is being held down. We'll
+      -- normalize the distance here so that strafing while moving forward moves
+      -- you the same distance as moving in only one direction would.
+      let (\v -> normalize v ^* movementDistance -> translation, rotation) =
+            deltas
+          updatedCamera = result ^. camera & rotation' +~ rotation
+                                           & rotation' %~ clampRoll
+                                           & translate translation
+          compute' = compileFor $ scalar updatedCamera
+          !result' = result & value .~ compute' (0, emptyOutput)
+                            & camera .~ updatedCamera
+                            & compute .~ compute'
 
-        putMVar mResult $! result'
+      putMVar mResult $! result'
 
-      unless shouldQuit $ go currentFrame
+    unless shouldQuit $ go currentFrame
 
 -- | Render the texture created by Accelerate using OpenGL.
 graphicsLoop :: Window -> MVar Result -> IO ()
 graphicsLoop window mResult = do
   -- 'Font.decode' should be able to load the font from am bytestring, but the
   -- bindings seem to be broken
-  font <- loadFont "open-sans.ttf"
-    Files.font 28
+  font <- loadFont "open-sans.ttf" Files.font 28
   Font.setHinting font Font.Light
 
   void $ glCreateContext window
-  (program, vao) <- initResources
+  (program, vao)  <- initResources
 
   -- Right now the window is not resizable so we can just create the surface
   -- once and then forget about it
   V2 width height <- SDL.get $ windowSize window
-  textSurface <- createRGBSurface (V2 width height) RGBA8888
+  textSurface     <- createRGBSurface (V2 width height) RGBA8888
 
   forever $ do
     let textureSize = GL.TextureSize2D screenWidth screenHeight
-    GL.viewport $=
-      (GL.Position 0 0, GL.Size (fromIntegral width) (fromIntegral height))
+    GL.viewport
+      $= (GL.Position 0 0, GL.Size (fromIntegral width) (fromIntegral height))
 
     result <- readMVar mResult
 
-    let (iterations, texture) = result ^. value
+    let (iterations, texture)        = result ^. value
 
         (((), ((((), r), g), b)), _) = A.toVectors texture
-        pixelBuffer = V.zipWith3 V3 r g b
+        pixelBuffer                  = V.zipWith3 V3 r g b
 
     GL.clearColor $= GL.Color4 0.5 0.5 0.5 1.0
     GL.clear [GL.ColorBuffer]
 
     -- We'll render the number of iterations (and any other text) to an SDL
     -- surface, which we can then transfer to a GPU buffer.
-    iterationSurface <-
-      Font.blended
-        font
-        (V4 255 255 255 255)
-        (T.pack . show $ iterations)
+    iterationSurface <- Font.blended font
+                                     (V4 255 255 255 255)
+                                     (T.pack . show $ iterations)
 
     unlockSurface textSurface
     surfaceFillRect textSurface Nothing (V4 0 0 0 0)
@@ -333,32 +321,30 @@ graphicsLoop window mResult = do
 
     GL.activeTexture $= GL.TextureUnit textTexUnit
     textPixels <- surfacePixels textSurface
-    GL.texImage2D
-      GL.Texture2D
-      GL.NoProxy
-      0
-      GL.RGBA'
-      textureSize
-      0
-      (GL.PixelData GL.RGBA GL.UnsignedByte textPixels)
+    GL.texImage2D GL.Texture2D
+                  GL.NoProxy
+                  0
+                  GL.RGBA'
+                  textureSize
+                  0
+                  (GL.PixelData GL.RGBA GL.UnsignedByte textPixels)
 
     -- We have to transform our @[V3 Float]@ into a format the OpenGL pixel
     -- transfer knows how to deal with. We could use a combination of
     -- 'concatMap' and 'GLU.withPixels' here, but that takes almost 200
     -- miliseconds combined.
     GL.activeTexture $= GL.TextureUnit resultTexUnit
-    unsafeWith pixelBuffer $ \p ->
-      GL.texImage2D
-        GL.Texture2D
-        GL.NoProxy
-        0
-        -- OpenGL will neatly normalize our texture to [0, 1] floating point
-        -- values if we use the 'GL.RGB'' internal representation instead. Not
-        -- like we've done this or anything.
-        GL.RGB32F
-        textureSize
-        0
-        (GL.PixelData GL.RGB GL.Float p)
+    unsafeWith pixelBuffer $ \p -> GL.texImage2D
+      GL.Texture2D
+      GL.NoProxy
+      0
+      -- OpenGL will neatly normalize our texture to [0, 1] floating point
+      -- values if we use the 'GL.RGB'' internal representation instead. Not
+      -- like we've done this or anything.
+      GL.RGB32F
+      textureSize
+      0
+      (GL.PixelData GL.RGB GL.Float p)
 
     -- This GLint version is **very** important. The Haskell bindings will
     -- hapilly accept a uint here, but OpenGL expects the texture units to be
@@ -368,8 +354,7 @@ graphicsLoop window mResult = do
     GLU.setUniform program "u_texture" (fromIntegral resultTexUnit :: GL.GLint)
     GLU.setUniform program "u_text" (fromIntegral textTexUnit :: GL.GLint)
     -- TODO: There has to be a better way to extract this Scalar Int
-    GLU.setUniform program "u_iterations"
-      (fromIntegral iterations :: GL.GLint)
+    GLU.setUniform program "u_iterations" (fromIntegral iterations :: GL.GLint)
 
     GL.bindVertexArrayObject $= Just vao
     GL.drawArrays GL.Triangles 0 6
@@ -382,16 +367,14 @@ initResources = do
   GL.blend $= GL.Enabled
   GL.blendFunc $= (GL.SrcAlpha, GL.OneMinusSrcAlpha)
 
-  program' <- GLU.simpleShaderProgramBS
-    Files.vertexShader
-    Files.fragmentShader
+  program' <- GLU.simpleShaderProgramBS Files.vertexShader Files.fragmentShader
 
   let vertexAttrib = GLU.getAttrib program' "v_pos"
   vao' <- GLU.makeVAO $ do
     vertexBuffer <- screenQuad
     GL.bindBuffer GL.ArrayBuffer $= Just vertexBuffer
-    GL.vertexAttribPointer vertexAttrib $=
-      (GL.ToFloat, GL.VertexArrayDescriptor 2 GL.Float 0 GLU.offset0)
+    GL.vertexAttribPointer vertexAttrib
+      $= (GL.ToFloat, GL.VertexArrayDescriptor 2 GL.Float 0 GLU.offset0)
     GL.vertexAttribArray vertexAttrib $= GL.Enabled
 
   GL.currentProgram $= Just (GLU.program program')
@@ -411,16 +394,16 @@ initResources = do
 
 -- | Create a screen quad that the fragment shader can be drawn on.
 screenQuad :: IO GL.BufferObject
-screenQuad =
-  GLU.makeBuffer
-    GL.ArrayBuffer
-    ([ V2 (-1.0) (-1.0)
-     , V2 1.0 (-1.0)
-     , V2 (-1.0) 1.0
-     , V2 1.0 (-1.0)
-     , V2 (-1.0) 1.0
-     , V2 1.0 1.0
-     ] :: [V2 Float])
+screenQuad = GLU.makeBuffer
+  GL.ArrayBuffer
+  ([ V2 (-1.0) (-1.0)
+   , V2 1.0    (-1.0)
+   , V2 (-1.0) 1.0
+   , V2 1.0    (-1.0)
+   , V2 (-1.0) 1.0
+   , V2 1.0    1.0
+   ] :: [V2 Float]
+  )
 
 -- | Convert mouse movement from actual screen pixels into a floating point
 -- representation that can be used for camera rotation.
@@ -431,9 +414,8 @@ adjustSensitivity n = fromIntegral n * (-0.001)
 -- not loading the font properly. Instead of reading directly from memory we'll
 -- simply write the font to disk and let sdl2_ttf read from there.
 loadFont :: String -> ByteString -> Font.PointSize -> IO Font.Font
-loadFont name bs size =
-  withSystemTempFile name $ \path handle -> do
-    hSetEncoding handle latin1
-    BS.hPut handle bs
+loadFont name bs size = withSystemTempFile name $ \path handle -> do
+  hSetEncoding handle latin1
+  BS.hPut handle bs
 
-    Font.load path size
+  Font.load path size

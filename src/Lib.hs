@@ -1,16 +1,19 @@
 {-# LANGUAGE CPP #-}
+
 module Lib
   ( run
   , run1
   , runN
-  ) where
+  )
+where
 
-import qualified Data.Array.Accelerate as A
+import qualified Data.Array.Accelerate         as A
 
 #ifdef USE_CPU_BACKEND
 import qualified Data.Array.Accelerate.LLVM.Native as CPU
 #else
-import qualified Data.Array.Accelerate.LLVM.PTX as GPU
+import qualified Data.Array.Accelerate.LLVM.PTX
+                                               as GPU
 #endif
 
 -- | Execute an Accelerate program using the GPU unless the @cpu@ flag is

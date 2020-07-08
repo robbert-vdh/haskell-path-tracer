@@ -13,14 +13,15 @@
 
 module Scene.Objects where
 
-import Data.Array.Accelerate as A
-import Data.Array.Accelerate.Array.Sugar
-import Data.Array.Accelerate.Control.Lens hiding (Const)
-import Data.Array.Accelerate.Linear as A
-import Data.Typeable
+import           Data.Array.Accelerate         as A
+import           Data.Array.Accelerate.Array.Sugar
+import           Data.Array.Accelerate.Control.Lens
+                                         hiding ( Const )
+import           Data.Array.Accelerate.Linear  as A
+import           Data.Typeable
 
-import Prelude ((<$>))
-import qualified Prelude as P
+import           Prelude                        ( (<$>) )
+import qualified Prelude                       as P
 
 -- | The result of a computation. This is an array of accumulated color values
 -- for every pixel along with the RNG seed that should be used for the next
@@ -41,16 +42,18 @@ type Noraml = (Point, Direction)
 
 data Scene = Scene
   { _sceneSpheres :: [Exp Sphere]
-  , _scenePlanes :: [Exp Plane]
-  } deriving (Typeable)
+  , _scenePlanes  :: [Exp Plane]
+  }
+  deriving Typeable
 
 data Camera = Camera
   { _cameraPosition :: Point
   -- | The camera's rotation expressed in @(roll, pitch, yaw)@ Euler angles.
   , _cameraRotation :: Direction
   -- | The camera's horizontal field of view in degrees.
-  , _cameraFov :: Int
-  } deriving (P.Eq, Show, Generic, Elt)
+  , _cameraFov      :: Int
+  }
+  deriving (P.Eq, Show, Generic, Elt)
 
 data Brdf
   = Diffuse {-# UNPACK #-} Float
@@ -58,16 +61,18 @@ data Brdf
   deriving (P.Eq, Show, Typeable)
 
 data Material = Material
-  { _materialColor :: {-# UNPACK #-} Color
+  { _materialColor       :: {-# UNPACK #-} Color
   , _materialIlluminance :: {-# UNPACK #-} Float
-  , _materialBrdf :: Brdf
-  } deriving (P.Eq, Show, Generic, Elt)
+  , _materialBrdf        :: Brdf
+  }
+  deriving (P.Eq, Show, Generic, Elt)
 
 data Plane = Plane
-  { _planePosition :: {-# UNPACK #-} Point
+  { _planePosition  :: {-# UNPACK #-} Point
   , _planeDirection :: {-# UNPACK #-} Direction
-  , _planeMaterial :: Material
-  } deriving (P.Eq, Show, Generic, Elt)
+  , _planeMaterial  :: Material
+  }
+  deriving (P.Eq, Show, Generic, Elt)
 
 -- | Any ray that is cast through the scene. This is defined as a type alias as
 -- the 'Ray' has to be polymorphic in order to to be able to lift a @Ray (Exp
@@ -75,15 +80,17 @@ data Plane = Plane
 type Normal = RayF
 type RayF = Ray Float
 data Ray a = Ray
-  { _rayOrigin :: V3 a
+  { _rayOrigin    :: V3 a
   , _rayDirection :: V3 a
-  } deriving (P.Eq, Show, Generic, Elt)
+  }
+  deriving (P.Eq, Show, Generic, Elt)
 
 data Sphere = Sphere
   { _spherePosition :: {-# UNPACK #-} Point
-  , _sphereRadius :: {-# UNPACK #-} Float
+  , _sphereRadius   :: {-# UNPACK #-} Float
   , _sphereMaterial :: {-# UNPACK #-} Material
-  } deriving (P.Eq, Show, Generic, Elt)
+  }
+  deriving (P.Eq, Show, Generic, Elt)
 
 -- * Pattern synonyms
 --
@@ -138,15 +145,18 @@ instance Lift Exp Sphere where
 -- We can't derive instances for 'Brdf' automatically as Accelerate does not yet
 -- support sum types. To work around this, we simply use define our own tagged
 -- unions as tuples.
+--
+-- Support for sum types is coming very soon though! :tada:
+-- See https://github.com/AccelerateHS/accelerate/pull/460
 
 instance Elt Brdf where
   type EltRepr Brdf = EltRepr (Bool, Float)
   eltType = eltType @(Bool, Float)
   toElt t = case toElt t of
-              (False, p) -> Diffuse p
-              (True, p) -> Glossy p
+    (False, p) -> Diffuse p
+    (True , p) -> Glossy p
   fromElt (Diffuse p) = fromElt (False, p)
-  fromElt (Glossy p) = fromElt (True, p)
+  fromElt (Glossy  p) = fromElt (True, p)
 
 instance Lift Exp Brdf where
   type Plain Brdf = Brdf
@@ -225,29 +235,29 @@ instance HasRotation Camera Direction where
 -- TODO: Maybe update these too
 
 rotation' :: Lens' Camera Direction
-rotation' f c@Camera {_cameraRotation = rot} =
-  (\x -> c {_cameraRotation = x}) <$> f rot
+rotation' f c@Camera { _cameraRotation = rot } =
+  (\x -> c { _cameraRotation = x }) <$> f rot
 position' :: Lens' Camera Point
-position' f c@Camera {_cameraPosition = pos} =
-  (\x -> c {_cameraPosition = x}) <$> f pos
+position' f c@Camera { _cameraPosition = pos } =
+  (\x -> c { _cameraPosition = x }) <$> f pos
 
 -- ** BRDF
 --
 -- Accelerate does not yet support sum types, but we can simply pattern match on
 -- the product representation to get the same effect.
 
-pattern Brdf' :: Exp Bool -> Exp Float -> Exp Brdf
-pattern Brdf' t p = Pattern (t, p)
+pattern Brdf_ :: Exp Bool -> Exp Float -> Exp Brdf
+pattern Brdf_ t p = Pattern (t, p)
 
 -- These sadly don't work, but I'll leave them in until they somehow do
-pattern Diffuse' :: Exp Float -> Exp Brdf
-pattern Diffuse' p = Brdf' False_ p
+pattern Diffuse_ :: Exp Float -> Exp Brdf
+pattern Diffuse_ p = Brdf_ False_ p
 
-pattern Glossy' :: Exp Float -> Exp Brdf
-pattern Glossy' p = Brdf' True_ p
+pattern Glossy_ :: Exp Float -> Exp Brdf
+pattern Glossy_ p = Brdf_ True_ p
 
 isDiffuse, isGlossy :: Exp Brdf -> Exp Bool
-isDiffuse (Brdf' t _) = t == constant False
-isDiffuse _ = constant False
-isGlossy (Brdf' t _) = t == constant True
-isGlossy _ = constant False
+isDiffuse (Brdf_ t _) = t == constant False
+isDiffuse _           = constant False
+isGlossy (Brdf_ t _) = t == constant True
+isGlossy _           = constant False

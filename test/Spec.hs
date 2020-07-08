@@ -1,4 +1,4 @@
-import Test.Tasty
+import           Test.Tasty
 
 import qualified Scene.Intersection.Tests
 
