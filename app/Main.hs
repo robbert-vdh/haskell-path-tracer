@@ -50,11 +50,11 @@ import System.IO
 import System.IO.Temp
 import System.Mem (performGC)
 
+import qualified Files
 import Lib
 import Scene.Trace
 import Scene.Objects (Camera, Direction, Point, RenderResult, rotation')
 import Scene.World (initialCamera)
-import TH
 import Util
 
 -- | A compiled rendering function for a specific camera position and
@@ -158,7 +158,7 @@ computationLoop mResult =
       -- optimization while keeping it responsive.
       -- TODO: Get rid of this hack
       let batchSize = max 30 $ (result ^. value . _1) `div` 50
-          !value'@(!iterations, !_) =
+          value'@(!iterations, !_) =
             if (result ^. value . _1) > 100
               then doTimes batchSize (result ^. compute) (result ^. value)
               else (result ^. compute) (result ^. value)
@@ -291,7 +291,7 @@ graphicsLoop window mResult = do
   -- 'Font.decode' should be able to load the font from am bytestring, but the
   -- bindings seem to be broken
   font <- loadFont "open-sans.ttf"
-    $(readFileBsQ "app/assets/OpenSans-Regular.ttf") 28
+    Files.font 28
   Font.setHinting font Font.Light
 
   void $ glCreateContext window
@@ -383,8 +383,8 @@ initResources = do
   GL.blendFunc $= (GL.SrcAlpha, GL.OneMinusSrcAlpha)
 
   program' <- GLU.simpleShaderProgramBS
-    $(readFileBsQ "app/assets/vs.glsl")
-    $(readFileBsQ "app/assets/fs.glsl")
+    Files.vertexShader
+    Files.fragmentShader
 
   let vertexAttrib = GLU.getAttrib program' "v_pos"
   vao' <- GLU.makeVAO $ do
