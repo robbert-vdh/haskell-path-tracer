@@ -23,8 +23,6 @@ flag Cpu
     manual:           True
     default:          False
 
--- TODO: Add missing version constraints
-
 common options
     ghc-options:      -Wall
 
