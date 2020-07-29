@@ -61,7 +61,7 @@ sphereTests = testGroup
       (Range.linearFrac (-1.0) 1.0)
     let sphere = makeSphere (V3 0.0 0.0 0.0) diameter
 
-    -- | Hits to a sphere's backface should not be registered
+    -- Hits to a sphere's backface should not be registered
     evalExp (distanceTo ray sphere) === Nothing
   , testProperty "no backwards intersections" $ property $ do
     rayDirection <- forAll $ L.normalize <$> v3 (Range.linearFrac (-1.0) 1.0)
@@ -81,7 +81,7 @@ planeTests = testGroup
         ray   = Ray_ (V3_ 0.0 0.0 0.0) (V3_ 0.0 0.0 1.0)
 
     -- Check if there was a hit
-    evalExp (distanceTo ray plane) === Just z
+    evalExp (distanceTo ray plane) === if z >= 0.0 then Just z else Nothing
   , testProperty "Backface culling Straight on" $ property $ do
     pos <- forAll point
     let nor   = V3 0.0 0.0 1.0
