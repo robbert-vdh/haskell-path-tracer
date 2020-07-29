@@ -44,7 +44,7 @@ library
         Util
 
     build-depends:
-        base ==4.13.0.0,
+        base >=4.13 && <5.0,
         accelerate ^>=1.4.0.0,
         lens-accelerate ^>=0.3.0.0,
         linear-accelerate ^>=0.8.0.0,
