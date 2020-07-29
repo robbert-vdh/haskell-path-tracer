@@ -93,13 +93,17 @@ planeTests = testGroup
   , testProperty "Continuous Angles" $ property $ do
     x <- forAll $ Gen.float (Range.linearFrac (-1000.0) 1000.0)
     y <- forAll $ Gen.float (Range.linearFrac (-1000.0) 1000.0)
-    let dir   = constant $ L.normalize (V3 x y 1.0)
-        ray   = Ray_ (V3_ 0.0 0.0 0.0) dir
-        plane = makePlane (V3 0.0 0.0 1.0) (V3 0.0 0.0 (-1.0))
+    let dir       = L.normalize (V3 x y 1.0)
+        ray       = Ray_ (V3_ 0.0 0.0 0.0) (constant dir)
+        plane     = makePlane (V3 0.0 0.0 1.0) (V3 0.0 0.0 (-1.0))
 
-    -- TODO: get angle the ray is at, use pythagoras to find distance.
-    -- replace this asser with something more usefull
-    evalExp (distanceTo ray plane) /== Nothing
+        -- Now calculate the distance to the plane based on the angle
+        cos_angle = L.dot dir (V3 0.0 0.0 1.0)
+        dist      = 1.0 / cos_angle
+
+    -- Check if there was a hit
+    evalExp (distanceTo ray plane)
+      === if dist >= 0.0 then Just dist else Nothing
   , testProperty "Backface culling Angles" $ property $ do
     x <- forAll $ Gen.float (Range.linearFrac (-1000.0) 1000.0)
     y <- forAll $ Gen.float (Range.linearFrac (-1000.0) 1000.0)
@@ -121,14 +125,14 @@ makeSphere pos diameter = constant $ Sphere { _spherePosition = pos
                                             , _sphereMaterial = dummyMaterial
                                             }
 
--- | Generate a dummy plane by its pos and normal
+-- | Generate a dummy plane by its pos and normal.
 makePlane :: V3 Float -> V3 Float -> Exp Plane
 makePlane pos nor = constant $ Plane { _planeDirection = nor
                                      , _planePosition  = pos
                                      , _planeMaterial  = dummyMaterial
                                      }
 
--- | Get a dummy material to use usefull as placeholder.
+-- | A placeholder material for use in tests.
 dummyMaterial :: Material
 dummyMaterial = Material { _materialColor       = V3 1.0 1.0 1.0
                          , _materialIlluminance = 1.0
