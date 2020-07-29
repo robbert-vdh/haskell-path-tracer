@@ -77,13 +77,16 @@ data Plane = Plane
 -- | Any ray that is cast through the scene. This is defined as a type alias as
 -- the 'Ray' has to be polymorphic in order to to be able to lift a @Ray (Exp
 -- (V3 Float)) (Exp (V3 Float))@ into a @Exp (Ray (V3 Float) (V3 Float))@.
-type Normal = RayF
-type RayF = Ray Float
 data Ray a = Ray
   { _rayOrigin    :: V3 a
   , _rayDirection :: V3 a
   }
   deriving (P.Eq, Show, Generic, Elt)
+type RayF = Ray Float
+
+-- | A normal and the point from which that normal was calculated (i.e. an
+-- intersection).
+type NormalP = RayF
 
 data Sphere = Sphere
   { _spherePosition :: {-# UNPACK #-} Point

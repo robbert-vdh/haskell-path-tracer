@@ -23,10 +23,10 @@ class Primitive p where
   normal :: Exp Point -> Exp p -> Exp Direction
   -- | Get intersection point, normal and material for a sphere hit. Assumes
   -- there is a hit.
-  hit :: Exp RayF -> Exp Float -> Exp p -> Exp (Normal, Material)
+  hit :: Exp RayF -> Exp Float -> Exp p -> Exp (NormalP, Material)
 
   default hit :: HasMaterial p Material =>
-    Exp RayF -> Exp Float -> Exp p -> Exp (Normal, Material)
+    Exp RayF -> Exp Float -> Exp p -> Exp (NormalP, Material)
   hit (Ray_ o d) t p =
     T2 (Ray_ hitPosition (normal hitPosition p)) (p ^. material)
     where

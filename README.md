@@ -1,5 +1,13 @@
 # Haskell Path Tracer
 
+A simple path tracing implementation written in Haskell using
+[accelerate](https://github.com/AccelerateHS/accelerate).
+
+This has recently been rewritten to make better use of streams so it can be
+parallelized better and so we can support features that require splitting rays
+such as refraction. At the moment the new implementation is still significantly
+slower than the old one.
+
 ## Building
 
 This application requires GHC 8.8.3 and LLVM 9.0.1 to build. An older version of
