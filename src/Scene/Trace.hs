@@ -77,7 +77,9 @@ maxIterations = 15
 --     4. Steps 2 and 3 get repeated until we either reach a maximum number of
 --        iterations or there are no new rays being produced.
 --     5. Finally we add the produced color values for each pixel to the
---        accumulated results from the previous frame.
+--        accumulated results from the previous frame. To prevent having to
+--        concatenate a bunch of arrays we'll do this as part of the iteration
+--        cycle.
 --
 --        TODO: If accelerate can parallelize these kernels properly we can do
 --              this summing step during step 3 so we don't have to do it all at
@@ -101,24 +103,12 @@ render screen camera acc =
         notFinished
         (\(T3 state results iterations) ->
           let T2 state' newResults = traceStep mainScene state
-              results'             = results ++ newResults
+              results'             = combine results newResults
               iterations'          = map succ iterations
           in  T3 state' results' iterations'
         )
-        (T3 initialState initialResults (unit (0 :: Exp Int)))
-  in
-      -- We just add all the resulting pixel values to the accumulated values
-      -- from the previous frames. We lose the pixel value here since we have to
-      -- match 'acc', but we can just look them up again in the original
-      -- 'finalResults' in the index mapping step.
-      -- TODO: Probably use xor for combining the seeds
-      permute
-        (\(T2 lColor lSeed) (T2 rColor rSeed) ->
-          T2 (lColor + rColor) (lSeed + rSeed)
-        )
-        acc
-        (\idx -> let T3 (V2_ x y) _ _ = finalResults ! idx in index2 y x)
-        (map (\(T3 _ c seed) -> T2 c seed) finalResults)
+        (T3 initialState acc (unit (0 :: Exp Int)))
+  in  finalResults
  where
   -- TODO: Can we avoid this @map snd@ by using a tuple? We would probably need
   --       to do two permutes in that case.
@@ -130,17 +120,32 @@ render screen camera acc =
     initialRays
     screen
     initialSeeds
-  initialResults = use (fromList (Z :. 0) [])
 
   -- | We stop iterating after there are no more rays or if we reach the
   -- iterations limit, whichever comes first.
   --
   -- TODO: Can we use 'null' this way?
   notFinished
-    :: Acc (Vector RayState, Vector RayResult, Scalar Int) -> Acc (Scalar Bool)
+    :: Acc (Vector RayState, RenderResult, Scalar Int) -> Acc (Scalar Bool)
   notFinished (T3 state _ iterations) = if not (null state)
     then unit True_
     else map (\n -> n <= maxIterations && not (null state)) iterations
+
+  -- | Add the newly calculated color values to the previous results. We lose
+  -- the pixel value here since we have to match 'acc', but we can just look
+  -- them up again in the original 'finalResults' in the index mapping step.
+  --
+  -- TODO: I think this may be the bottleneck.
+  combine :: Acc RenderResult -> Acc (Vector RayResult) -> Acc RenderResult
+  combine results newResults =
+      -- TODO: Probably use xor for combining the seeds
+                               permute
+    (\(T2 lColor lSeed) (T2 rColor rSeed) ->
+      T2 (lColor + rColor) (lSeed + rSeed)
+    )
+    results
+    (\idx -> let T3 (V2_ x y) _ _ = newResults ! idx in index2 y x)
+    (map (\(T3 _ c seed) -> T2 c seed) newResults)
 
 -- | Calculate the origin and directions of the primary rays based on a camera
 -- and a matrix of screen pixel positions. These positions should be in the
