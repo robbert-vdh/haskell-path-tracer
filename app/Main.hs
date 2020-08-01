@@ -52,7 +52,6 @@ import qualified SDL.Font                      as Font
 import qualified SDL
 import           System.IO
 import           System.IO.Temp
-import           System.Mem                     ( performGC )
 
 import qualified Files
 import           Lib
@@ -146,14 +145,6 @@ compileFor !c =
 computationLoop :: MVar Result -> IO ()
 computationLoop mResult = flip evalStateT reseedInterval $ forever $ do
   currentIterations <- liftIO $ do
-    -- Force the GC every iteration. This should not hurt performance, but it
-    -- will somewhat prevent VRAM usage from skyrocketing since we're doing
-    -- hundreds to thousands of calculations per second and the GC won't be
-    -- able to keep up otherwise
-    -- TODO: Maybe just add this as part of 'compileFor' if it really does not
-    --       have any negative impacts
-    performGC
-
     result <- takeMVar mResult
 
     -- We can gain some performance by calculating multiple samples at once, but
