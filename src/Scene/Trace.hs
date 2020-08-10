@@ -116,6 +116,8 @@ maxIterations = 15
 -- throughput)@, where throughput is a comulative product of the BRDFs,
 -- probability density functions and material colors.
 --
+-- FIXME: The RNG seeds get mseed up now, can we fix this?
+--
 -- * 'Inline'
 --
 -- TODO:
