@@ -132,9 +132,11 @@ main = do
 -- | Create a function for rendering a single sample based on the current camera
 -- position. This function is meant to be reused until the 'Camera' position
 -- gets updated. This way Accelerate does not have to recompile every frame
+--
+-- TODO: Make the algorithm selectable through a command line option
 compileFor :: A.Scalar Camera -> CompiledFunction
 compileFor !c =
-  let dewit = runN render screenPixels
+  let dewit = runN (render Streams) screenPixels
   in  \(!iterations, !acc) -> (iterations + 1, dewit c acc)
 
 -- | Perform the actual path tracing. This is done in a seperate thread that

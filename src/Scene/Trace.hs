@@ -46,6 +46,25 @@ type RayState = (RayF, V2 Int, V3 Float, Word32)
 -- rendering cycle.
 type RayResult = (V2 Int, Color, Word32)
 
+-- | A marker for which ray tracing implementation to use. At the moment there
+-- are two algorithms:
+--
+--    * A stream based algorithm, selectable with the '@streams@' option. This
+--      variant is more advanced, modular, and allows features that require
+--      diverging rays like light refraction to be implemented. The downside of
+--      this approach is that most of the time is spent on spinlocks since
+--      Accelerate's array fusion is not yet able to fuse the substeps in this
+--      algorithm.
+--    * The '@inline@' algorithm maps every pixel to a color and then adds those
+--      colors to the old values. Since this approach has a 1-to-1 mapping
+--      between pixels and rays features such as refraction cannot be
+--      implemented here, but it does give a good indication as to how fast the
+--      algorithm would be with ideal array fusion. As such this algorithm is
+--      much faster than the stream based implementation.
+--
+-- TODO: Actually add the inlined verison back
+data Algorithm = Streams | Inline
+
 -- | The maximum number of bounces a ray can make.
 maxIterations :: Exp Int
 maxIterations = 15
@@ -54,6 +73,11 @@ maxIterations = 15
 -- generated sample. In the application, we use the 'compileFor' function to fix
 -- the first two arguments since those won't ever change until we have to reset
 -- the computations because the camera was moved.
+--
+-- You can change the algorithms by passing a different variant of 'Algorithm'.
+-- See below for more detailed explanations of the algorithms.
+--
+-- * 'Streams'
 --
 -- A single rendering step consists of the following substeps:
 --
@@ -92,13 +116,18 @@ maxIterations = 15
 -- throughput)@, where throughput is a comulative product of the BRDFs,
 -- probability density functions and material colors.
 --
--- TODO: Reword the above paragraph with updated function and value names
+-- * 'Inline'
+--
+-- TODO:
+--
+-- TODO: Reword the above with updated function and value names
 render
-  :: Acc (Matrix (V2 Int)) -- ^ Screen pixel coordinates
+  :: Algorithm
+  -> Acc (Matrix (V2 Int)) -- ^ Screen pixel coordinates
   -> Acc (Scalar Camera)
   -> Acc RenderResult -- ^ Accumulated results and RNG seeds
   -> Acc RenderResult -- ^ New results and new RNG seeds
-render screen camera acc =
+render Streams screen camera acc =
   let T3 _ finalResults _ = awhile
         notFinished
         (\(T3 state results iterations) ->
@@ -146,6 +175,9 @@ render screen camera acc =
     results
     (\idx -> let T3 (V2_ x y) _ _ = newResults ! idx in index2 y x)
     (map (\(T3 _ c seed) -> T2 c seed) newResults)
+
+render Inline _screen _camera _acc =
+  error "TODO: Add this back in from an earlier commit"
 
 -- | Calculate the origin and directions of the primary rays based on a camera
 -- and a matrix of screen pixel positions. These positions should be in the
@@ -240,7 +272,7 @@ traceStep scene state =
     -- -> Exp Int
     -> Exp RayState
   computeNewRay (T5 ray intersection pixel throughput seed) =
-    let T2 iNormal iMaterial            = fromJust intersection
+    let T2 iNormal iMaterial           = fromJust intersection
         -- TODO: When adding diverging rays, we should make sure to change the
         --       seed here
         T3 nextRay throughputMod seed' = calcNextRay iMaterial iNormal ray seed
