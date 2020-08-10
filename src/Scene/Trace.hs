@@ -198,8 +198,6 @@ primaryRays (Camera_ cPos cRot (fromIntegral -> cFov)) = map transform
 -- 'render'. The resulting vectors contain new rays for the next step of the
 -- algorithm and color values produced by this step's rays.
 --
--- TODO: Make the emission, BRDF, and next ray direction functions of
---       'Material'.
 -- TODO: I feel like some things are normalized when they shouldn't be. Diffuse
 --       spheres look like they have a ring of bright light on them, but I feel
 --       like it stops too abruptly for it to just be diffusion.
@@ -242,50 +240,11 @@ traceStep scene state =
     -- -> Exp Int
     -> Exp RayState
   computeNewRay (T5 ray intersection pixel throughput seed) =
-    let
-      T2 (Ray_ iPoint iNormal) iMaterial = fromJust intersection
-      -- TODO: When adding diverging rays, we should make sure to change the
-      --       seed here
-      T2 rotationVector        seed'     = genVec seed
-      -- TODO: Move brdf part to another function
-      T2 nextDirection         brdf'     = caseof
-        (iMaterial ^. brdf)
-        [ ( isDiffuse
-            -- Diffuse objects are modeled through Lambartian reflectance. The
-            -- next ray should be fired somewhere in the hemisphere of the
-            -- intersected primitives' normal.
-          , let Brdf_ _ p = iMaterial ^. brdf
-                next =
-                  rotate (anglesToQuaternion $ pi *^ rotationVector) iNormal
-                b = p / pi * (next `dot` iNormal)
-            in  T2 next b
-          )
-        , ( isGlossy
-            -- The glossy model uses the Blinn-Phong reflection model.
-            -- TODO: Find out what the correct way to scale the
-            --       'rotationVector' is. Right now I've chosen it in such a
-            --       way that @p = 0@ results in mirror-like behaviour.
-          , let
-              Brdf_ _ p         = iMaterial ^. brdf
-              intersectionAngle = (ray ^. direction) `dot` iNormal
-              reflection =
-                (ray ^. direction) - 2 * intersectionAngle *^ iNormal
-              next = rotate (anglesToQuaternion $ (1 - p) *^ rotationVector)
-                            reflection
-              -- This has to be clamped to 0 as 'next' may be pointing in to
-              -- the area behind the intersection
-              b = max 0 $ p * (next `dot` reflection)
-            in
-              T2 next b
-          )
-        ]
-        (T2 (V3_ 0.0 0.0 0.0) 0)
-
-      nextRay     = Ray_ (iPoint + nextDirection ^* epsilon) nextDirection
-      nextRayProb = 1 / (pi * 2)
-      mColor      = iMaterial ^. color
-    in
-      T4 nextRay pixel (throughput * mColor ^* (brdf' * nextRayProb)) seed'
+    let T2 iNormal iMaterial            = fromJust intersection
+        -- TODO: When adding diverging rays, we should make sure to change the
+        --       seed here
+        T3 nextRay throughputMod seed' = calcNextRay iMaterial iNormal ray seed
+    in  T4 nextRay pixel (throughput * throughputMod) seed'
 
   -- | Compute the 'RayResult' for a ray that intersects a primitive. This is
   -- to be used with 'expand' and assumes that there has been an intersection.
@@ -310,6 +269,59 @@ traceStep scene state =
 numNewRays :: Exp (Maybe (NormalP, Material)) -> Exp (V3 Float) -> Exp Bool
 numNewRays iMaterial throughput =
   if nearZero throughput || isNothing iMaterial then False_ else True_
+
+-- | Calculate a next ray and throughput modifier based on an intersected
+-- primitive's material, the intersection point, the normal at the intersection
+-- and the previous ray.
+--
+-- The resulting value is a pair of @(next_ray, throughput_modifier, next_seed)@. The
+-- throughput modifier has to be multiplied with the old throughput to obtain
+-- the new throughput values.
+calcNextRay
+  :: Exp Material
+  -> Exp NormalP
+  -> Exp RayF
+  -> Exp Word32
+  -> Exp (RayF, V3 Float, Word32)
+calcNextRay iMaterial (Ray_ iPoint iNormal) ray seed =
+  let
+    T2 rotationVector seed' = genVec seed
+    T2 nextDirection  brdf' = caseof
+      (iMaterial ^. brdf)
+      [ ( isDiffuse
+          -- Diffuse objects are modeled through Lambartian reflectance. The
+          -- next ray should be fired somewhere in the hemisphere of the
+          -- intersected primitives' normal.
+        , let Brdf_ _ p = iMaterial ^. brdf
+              next = rotate (anglesToQuaternion $ pi *^ rotationVector) iNormal
+              b = p / pi * (next `dot` iNormal)
+          in  T2 next b
+        )
+      , ( isGlossy
+          -- The glossy model uses the Blinn-Phong reflection model.
+          -- TODO: Find out what the correct way to scale the
+          --       'rotationVector' is. Right now I've chosen it in such a
+          --       way that @p = 0@ results in mirror-like behaviour.
+        , let
+            Brdf_ _ p = iMaterial ^. brdf
+            intersectionAngle = (ray ^. direction) `dot` iNormal
+            reflection = (ray ^. direction) - 2 * intersectionAngle *^ iNormal
+            next =
+              rotate (anglesToQuaternion $ (1 - p) *^ rotationVector) reflection
+            -- This has to be clamped to 0 as 'next' may be pointing in to
+            -- the area behind the intersection
+            b = max 0 $ p * (next `dot` reflection)
+          in
+            T2 next b
+        )
+      ]
+      (T2 (V3_ 0.0 0.0 0.0) 0)
+
+    nextRay     = Ray_ (iPoint + nextDirection ^* epsilon) nextDirection
+    nextRayProb = 1 / (pi * 2)
+    mColor      = iMaterial ^. color
+  in
+    T3 nextRay (mColor ^* (brdf' * nextRayProb)) seed'
 
 -- | Check if a ray hits a primitive. If the ray did intersect a primitive,
 -- return the intersection, the normal of the intersected primitive at that
