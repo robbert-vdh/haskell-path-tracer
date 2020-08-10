@@ -106,6 +106,7 @@ executable tracer
         deepseq ^>=1.4.4.0,
         lens ^>=4.19.2,
         mtl ^>=2.2.2,
+        optparse-applicative ^>=0.15.1.0,
         text ^>=1.2.4.0,
         vector ^>=0.12.1.2,
 

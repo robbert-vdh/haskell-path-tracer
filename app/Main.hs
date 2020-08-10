@@ -44,6 +44,7 @@ import           Data.Vector.Storable           ( unsafeWith )
 import           Foreign.C.Types                ( CInt(..) )
 import qualified Graphics.GLUtil               as GLU
 import qualified Graphics.Rendering.OpenGL     as GL
+import qualified Options.Applicative           as O
 import           SDL                     hiding ( Point
                                                 , get
                                                 , translation
@@ -73,10 +74,12 @@ type CompiledFunction = (Int, RenderResult) -> (Int, RenderResult)
 -- | The rendering results. The resulting 'Color' matrix should be divided by
 -- the number of iterations in order to obtain the final averaged image.
 --
--- Because the computation function is also dependant in the camera, we simply
--- store it next to the other values.
+-- We store both the compilation function and the compiled rendering function
+-- here since the former is dependant on the parsed command line arguments, and
+-- the latter has to be updated whenever the camera position changes.
 data Result = Result
-  { _resultCompute :: CompiledFunction
+  { _resultCompile :: A.Scalar Camera -> CompiledFunction
+  , _resultCompute :: CompiledFunction
   , _resultValue   :: (Int, RenderResult)
   , _resultCamera  :: Camera
   }
@@ -93,8 +96,28 @@ textTexUnit = 1
 movementSpeed :: Float
 movementSpeed = 3.0
 
+type Options = Algorithm
+
+cliOptions :: O.Parser Options
+cliOptions = O.option
+  -- TODO: Get this to print the different options, and make sure those options
+  --       are in lower case.
+  O.auto
+  (  O.long "variant"
+  <> O.help
+       "The algorithm to use. See the doumentation in 'Scene.Trace' for more details."
+  <> O.value Streams
+  )
+
 main :: IO ()
 main = do
+  arguments <- O.execParser $ O.info
+    (cliOptions O.<**> O.helper)
+    (  O.fullDesc
+    <> O.header
+         "tracer - An collection of inefficient path tracing algorithms written in Accelerate"
+    )
+
   initializeAll
   Font.initialize
 
@@ -106,9 +129,11 @@ main = do
                                 $ defaultOpenGL { glProfile = Core Normal 3 3 }
     }
 
-  let compute' = compileFor $ scalar initialCamera
+  let compile' = compileFor arguments
+      compute' = compile' $ scalar initialCamera
   seeds   <- initialOutput
-  mResult <- newMVar $! Result { _resultCompute = compute'
+  mResult <- newMVar $! Result { _resultCompile = compile'
+                               , _resultCompute = compute'
                                , _resultValue   = compute' (0, seeds)
                                , _resultCamera  = initialCamera
                                }
@@ -134,9 +159,9 @@ main = do
 -- gets updated. This way Accelerate does not have to recompile every frame
 --
 -- TODO: Make the algorithm selectable through a command line option
-compileFor :: A.Scalar Camera -> CompiledFunction
-compileFor !c =
-  let dewit = runN (render Streams) screenPixels
+compileFor :: Options -> A.Scalar Camera -> CompiledFunction
+compileFor config !c =
+  let dewit = runN (render config) screenPixels
   in  \(!iterations, !acc) -> (iterations + 1, dewit c acc)
 
 -- | Perform the actual path tracing. This is done in a seperate thread that
@@ -260,7 +285,7 @@ inputLoop mResult = time >>= go
           updatedCamera = result ^. camera & rotation' +~ rotation
                                            & rotation' %~ clampRoll
                                            & translate translation
-          compute' = compileFor $ scalar updatedCamera
+          compute' = result ^. compile $ scalar updatedCamera
           !result' = result & value .~ compute' (0, emptyOutput)
                             & camera .~ updatedCamera
                             & compute .~ compute'

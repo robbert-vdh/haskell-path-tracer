@@ -24,7 +24,6 @@ import           Data.Array.Accelerate.Data.Functor
 import           Data.Array.Accelerate.Linear
 
 import qualified Prelude                       as P
-                                                ( )
 
 import           Scene.Intersection
 import           Scene.Objects
@@ -63,7 +62,9 @@ type RayResult = (V2 Int, Color, Word32)
 --      much faster than the stream based implementation.
 --
 -- TODO: Actually add the inlined verison back
-data Algorithm = Streams | Inline
+data Algorithm = Streams | Inline deriving (P.Read, P.Show)
+
+-- instance Read Algorithm where
 
 -- | The maximum number of bounces a ray can make.
 maxIterations :: Exp Int
