@@ -1,5 +1,9 @@
 packages:  .
 
+-- TODO: Remove this after accelerate updates. Everything compiles just fine on
+--       GHC 8.10.x.
+allow-newer: *:base, *:template-haskell
+
 package accelerate
     flags: +debug
 

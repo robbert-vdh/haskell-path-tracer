@@ -98,8 +98,8 @@ executable tracer
     build-depends:
         tracer,
 
-        base ==4.13.0.0,
-        template-haskell ^>=2.15.0.0,
+        base >=4.13 && <5.0,
+        template-haskell ^>=2.15,
         accelerate ^>=1.4.0.0,
         accelerate-io-vector ^>=0.1.0.0,
         bytestring ^>=0.10.10.0,
@@ -107,7 +107,7 @@ executable tracer
         lens ^>=4.19.2,
         mtl ^>=2.2.2,
         optparse-applicative ^>=0.15.1.0,
-        text ^>=1.2.4.0,
+        text ^>=1.2,
         vector ^>=0.12.1.2,
 
         -- OpenGL related packages
@@ -156,8 +156,7 @@ test-suite tracer-test
     build-depends:
         tracer,
 
-        base ==4.13.0.0,
-
+        base >=4.13 && <5.0,
         accelerate ^>=1.4.0.0,
         hedgehog ^>=1.0.2,
         linear ^>=1.21.1,

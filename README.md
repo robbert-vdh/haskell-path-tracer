@@ -10,11 +10,9 @@ slower than the old one.
 
 ## Building
 
-This application requires GHC 8.8.3 and LLVM 9.0.1 to build. An older version of
-GHC can be installed through
-[ghcup](https://gitlab.haskell.org/haskell/ghcup-hs), and support for LLVM 10 is
-tracked in [this issue](https://github.com/llvm-hs/llvm-hs/issues/293). To
-compile and run, simply run:
+This application requires LLVM 9.0.1 to build. Support for LLVM 10 is tracked in
+[this issue](https://github.com/llvm-hs/llvm-hs/issues/293). To compile and run,
+simply run:
 
 ```shell
 cabal run -j tracer
