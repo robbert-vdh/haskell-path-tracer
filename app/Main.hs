@@ -251,13 +251,13 @@ inputLoop mResult = time >>= go
           -- The right mouse button enables mouse look. SDL's relative mouse
           -- location mode also implicitely hides the cursor and enables window
           -- grab.
-          MouseButtonEvent MouseButtonEventData { mouseButtonEventButton = ButtonRight, mouseButtonEventMotion = motion, ..}
+          MouseButtonEvent MouseButtonEventData { mouseButtonEventButton = ButtonRight, mouseButtonEventMotion = motion }
             -> void $ setMouseLocationMode $ if motion == Pressed
               then RelativeLocation
               else AbsoluteLocation
           -- Mouse movement should only be precessed while the right mouse
           -- button is being held down
-          MouseMotionEvent MouseMotionEventData { mouseMotionEventRelMotion = V2 (adjustSensitivity -> dx) (adjustSensitivity -> dy), ..}
+          MouseMotionEvent MouseMotionEventData { mouseMotionEventRelMotion = V2 (adjustSensitivity -> dx) (adjustSensitivity -> dy) }
             | allowMouseMovement
             -> modify $ \(t, r) -> (t, r + V3 dy dx 0.0)
           _ -> return ()
