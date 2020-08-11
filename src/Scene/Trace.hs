@@ -1,4 +1,6 @@
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RebindableSyntax #-}
 {-# LANGUAGE Strict #-}
 {-# LANGUAGE TypeApplications #-}
@@ -168,15 +170,14 @@ render Streams screen camera acc =
   -- them up again in the original 'finalResults' in the index mapping step.
   --
   -- TODO: I think this may be the bottleneck.
+  -- TODO: Probably use xor for combining the seeds
   combine :: Acc RenderResult -> Acc (Vector RayResult) -> Acc RenderResult
-  combine results newResults =
-      -- TODO: Probably use xor for combining the seeds
-                               permute
+  combine results newResults = permute
     (\(T2 lColor lSeed) (T2 rColor rSeed) ->
       T2 (lColor + rColor) (lSeed + rSeed)
     )
     results
-    (\idx -> let T3 (V2_ x y) _ _ = newResults ! idx in index2 y x)
+    (\idx -> let T3 (V2_ x y) _ _ = newResults ! idx in Just_ $ index2 y x)
     (map (\(T3 _ c seed) -> T2 c seed) newResults)
 
 render Inline _screen _camera _acc =
@@ -321,36 +322,29 @@ calcNextRay
 calcNextRay iMaterial (Ray_ iPoint iNormal) ray seed =
   let
     T2 rotationVector seed' = genVec seed
-    T2 nextDirection  brdf' = caseof
-      (iMaterial ^. brdf)
-      [ ( isDiffuse
-          -- Diffuse objects are modeled through Lambartian reflectance. The
-          -- next ray should be fired somewhere in the hemisphere of the
-          -- intersected primitives' normal.
-        , let Brdf_ _ p = iMaterial ^. brdf
-              next = rotate (anglesToQuaternion $ pi *^ rotationVector) iNormal
-              b = p / pi * (next `dot` iNormal)
-          in  T2 next b
-        )
-      , ( isGlossy
-          -- The glossy model uses the Blinn-Phong reflection model.
-          -- TODO: Find out what the correct way to scale the
-          --       'rotationVector' is. Right now I've chosen it in such a
-          --       way that @p = 0@ results in mirror-like behaviour.
-        , let
-            Brdf_ _ p = iMaterial ^. brdf
-            intersectionAngle = (ray ^. direction) `dot` iNormal
-            reflection = (ray ^. direction) - 2 * intersectionAngle *^ iNormal
-            next =
-              rotate (anglesToQuaternion $ (1 - p) *^ rotationVector) reflection
-            -- This has to be clamped to 0 as 'next' may be pointing in to
-            -- the area behind the intersection
-            b = max 0 $ p * (next `dot` reflection)
-          in
-            T2 next b
-        )
-      ]
-      (T2 (V3_ 0.0 0.0 0.0) 0)
+    T2 nextDirection  brdf' = (iMaterial ^. brdf) & match \case
+      -- Diffuse objects are modeled through Lambartian reflectance. The
+      -- next ray should be fired somewhere in the hemisphere of the
+      -- intersected primitives' normal.
+      Diffuse_ p ->
+        let next = rotate (anglesToQuaternion $ pi *^ rotationVector) iNormal
+            b    = p / pi * (next `dot` iNormal)
+        in  T2 next b
+      -- The glossy model uses the Blinn-Phong reflection model.
+      -- TODO: Find out what the correct way to scale the
+      --       'rotationVector' is. Right now I've chosen it in such a
+      --       way that @p = 0@ results in mirror-like behaviour.
+      Glossy_ p ->
+        let
+          intersectionAngle = (ray ^. direction) `dot` iNormal
+          reflection = (ray ^. direction) - 2 * intersectionAngle *^ iNormal
+          next =
+            rotate (anglesToQuaternion $ (1 - p) *^ rotationVector) reflection
+          -- This has to be clamped to 0 as 'next' may be pointing in to
+          -- the area behind the intersection
+          b = max 0 $ p * (next `dot` reflection)
+        in
+          T2 next b
 
     nextRay     = Ray_ (iPoint + nextDirection ^* epsilon) nextDirection
     nextRayProb = 1 / (pi * 2)

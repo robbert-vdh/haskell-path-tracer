@@ -7,16 +7,13 @@ package accelerate
 source-repository-package
     type: git
     location: https://github.com/AccelerateHS/accelerate.git
-    tag: 632b3fe460bb59fefe6eb20df713d91798b6b494
+    tag: 65a6c32b0b06ff88c43c8604d0920ccd1fb8b05d
 
 -- accelerate-io-*-0.1.0.0+
--- NOTE: This fork only updates accelerate-io-vector. The current master
---       upstream version of accelerate-io is fully updated for upstream
---       accelerate.
 source-repository-package
     type: git
-    location: https://github.com/robbert-vdh/accelerate-io.git
-    tag: 05cc21fa90376f2c99d6057e51b7a7b223cd1890
+    location: https://github.com/AccelerateHS/accelerate-io.git
+    tag: 1ba4c7db50c255b327e5d037c4c52bb0c1a297fc
     subdir:
         accelerate-io
         accelerate-io-array
@@ -28,12 +25,10 @@ source-repository-package
         accelerate-io-vector
 
 -- accelerate-llvm-*-1.4.0.0+
--- NOTE: This fork adds back a missing synchronization in @accelerate-llvm-ptx@,
---       this fix is now also in the upstream mater branch.
 source-repository-package
     type: git
-    location: https://github.com/robbert-vdh/accelerate-llvm.git
-    tag: 52fe37c63a53aaa840d81b840ff11b4d78c89983
+    location: https://github.com/AccelerateHS/accelerate-llvm.git
+    tag: b4fea3244424f2709feaca9dc2e5588d2e79e424
     subdir:
         accelerate-llvm
         accelerate-llvm-native
@@ -55,7 +50,7 @@ source-repository-package
 source-repository-package
     type: git
     location: https://github.com/ekmett/linear-accelerate.git
-    tag: 1f69959d985f8c3c116795fa896b227f03ac37d6
+    tag: e0956017d938a05f2ef4180b364f4d2cd71eb5b9
 
 -- lens-accelerate-0.3.0.0
 source-repository-package

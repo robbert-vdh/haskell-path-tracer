@@ -16,7 +16,7 @@ import           Data.Array.Accelerate         as A
                                          hiding ( pattern V2
                                                 , pattern V3
                                                 )
-import qualified Data.Array.Accelerate.Array.Sugar
+import qualified Data.Array.Accelerate.Sugar.Shape
                                                as S
 import           Data.Array.Accelerate.Control.Lens
 import           Data.Array.Accelerate.Data.Functor

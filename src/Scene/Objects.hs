@@ -1,8 +1,8 @@
-{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE Strict #-}
@@ -10,11 +10,11 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ViewPatterns #-}
 
 module Scene.Objects where
 
 import           Data.Array.Accelerate         as A
-import           Data.Array.Accelerate.Array.Sugar
 import           Data.Array.Accelerate.Control.Lens
                                          hiding ( Const )
 import           Data.Array.Accelerate.Linear  as A
@@ -58,7 +58,7 @@ data Camera = Camera
 data Brdf
   = Diffuse {-# UNPACK #-} Float
   | Glossy {-# UNPACK #-} Float
-  deriving (P.Eq, Show, Typeable)
+  deriving (P.Eq, Show, Generic, Elt)
 
 data Material = Material
   { _materialColor       :: {-# UNPACK #-} Color
@@ -100,70 +100,7 @@ data Sphere = Sphere
 -- See the documentation for 'Data.Array.Accelerate' for more information about
 -- these.
 
-pattern Camera_ :: Exp Point -> Exp Direction -> Exp Int -> Exp Camera
-pattern Camera_ p d f = Pattern (p, d, f)
-
-pattern Material_ :: Exp Color -> Exp Float -> Exp Brdf -> Exp Material
-pattern Material_ c i b = Pattern (c, i, b)
-
-pattern Plane_ :: Exp Point -> Exp Direction -> Exp Material -> Exp Plane
-pattern Plane_ p d m = Pattern (p, d, m)
-
-pattern Ray_ :: Elt a => Exp (V3 a) -> Exp (V3 a) -> Exp (Ray a)
-pattern Ray_ o d = Pattern (o, d)
-
-pattern Sphere_ :: Exp Point -> Exp Float -> Exp Material -> Exp Sphere
-pattern Sphere_ p r m = Pattern (p, r, m)
-
-{-# COMPLETE Camera_ #-}
-{-# COMPLETE Material_ #-}
-{-# COMPLETE Plane_ #-}
-{-# COMPLETE Ray_ #-}
-{-# COMPLETE Sphere_ #-}
-
--- * Instances
-
-instance Lift Exp Camera where
-  type Plain Camera = Camera
-  lift = constant
-
-instance Lift Exp Plane where
-  type Plain Plane = Plane
-  lift = constant
-
-instance Lift Exp Material where
-  type Plain Material = Material
-  lift = constant
-
-instance (Lift Exp a, Elt (Plain a)) => Lift Exp (Ray a) where
-  type Plain (Ray a) = Ray (Plain a)
-  lift (Ray o d) = Ray_ (lift o) (lift d)
-
-instance Lift Exp Sphere where
-  type Plain Sphere = Sphere
-  lift = constant
-
--- ** BRDF
---
--- We can't derive instances for 'Brdf' automatically as Accelerate does not yet
--- support sum types. To work around this, we simply use define our own tagged
--- unions as tuples.
---
--- Support for sum types is coming very soon though! :tada:
--- See https://github.com/AccelerateHS/accelerate/pull/460
-
-instance Elt Brdf where
-  type EltRepr Brdf = EltRepr (Bool, Float)
-  eltType = eltType @(Bool, Float)
-  toElt t = case toElt t of
-    (False, p) -> Diffuse p
-    (True , p) -> Glossy p
-  fromElt (Diffuse p) = fromElt (False, p)
-  fromElt (Glossy  p) = fromElt (True, p)
-
-instance Lift Exp Brdf where
-  type Plain Brdf = Brdf
-  lift = constant
+mkPatterns [''Brdf, ''Camera, ''Material, ''Plane, ''Ray, ''Sphere]
 
 -- * Lenses
 --
@@ -243,24 +180,3 @@ rotation' f c@Camera { _cameraRotation = rot } =
 position' :: Lens' Camera Point
 position' f c@Camera { _cameraPosition = pos } =
   (\x -> c { _cameraPosition = x }) <$> f pos
-
--- ** BRDF
---
--- Accelerate does not yet support sum types, but we can simply pattern match on
--- the product representation to get the same effect.
-
-pattern Brdf_ :: Exp Bool -> Exp Float -> Exp Brdf
-pattern Brdf_ t p = Pattern (t, p)
-
--- These sadly don't work, but I'll leave them in until they somehow do
-pattern Diffuse_ :: Exp Float -> Exp Brdf
-pattern Diffuse_ p = Brdf_ False_ p
-
-pattern Glossy_ :: Exp Float -> Exp Brdf
-pattern Glossy_ p = Brdf_ True_ p
-
-isDiffuse, isGlossy :: Exp Brdf -> Exp Bool
-isDiffuse (Brdf_ t _) = t == constant False
-isDiffuse _           = constant False
-isGlossy (Brdf_ t _) = t == constant True
-isGlossy _           = constant False

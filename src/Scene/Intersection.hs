@@ -38,7 +38,7 @@ instance Primitive Sphere where
   --
   -- https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-sphere-intersection
   distanceTo (Ray_ ori dir) ~(Sphere_ pos rad _) =
-    if tca < 0 || d2 > (rad ** 2) || t < 0 then nothing else just t
+    if tca < 0 || d2 > (rad ** 2) || t < 0 then Nothing_ else Just_ t
    where
     l   = pos - ori
     tca = l `dot` dir
@@ -56,8 +56,8 @@ instance Primitive Plane where
   --
   -- https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-plane-and-ray-disk-intersection
   distanceTo (Ray_ ori dir) ~(Plane_ pos nor _) = if denom > 1e-6 || dist < 0
-    then nothing
-    else just dist
+    then Nothing_
+    else Just_ dist
    where
     denom = dir `dot` nor
     dist  = ((pos - ori) `dot` nor) / denom
