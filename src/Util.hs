@@ -205,6 +205,8 @@ expMinWith f (x : xs) = fst $ P.foldl'
 
 -- | The dimensions of the screen. These are hard coded for efficiency's sake
 -- even though the window could be resizable with minor adjustments.
+--
+-- TODO: Make this configurable through a command line option
 screenWidth, screenHeight :: Int32
 screenWidth = 800
 screenHeight = 600
