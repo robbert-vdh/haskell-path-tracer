@@ -11,7 +11,7 @@ slower than the old one.
 ## Building
 
 This application requires LLVM 9.0.1 to build, and the GPU version requires CUDA
-10.1 until the bindings are updated. Support for LLVM 10 is tracked in [this
+10.x until the bindings are updated. Support for LLVM 10 is tracked in [this
 issue](https://github.com/llvm-hs/llvm-hs/issues/293). To compile and run,
 simply run:
 
