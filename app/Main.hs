@@ -99,10 +99,21 @@ type Options = Algorithm
 
 cliOptions :: O.Parser Options
 cliOptions = O.option
-  -- TODO: Get this to print the different options, and make sure those options
-  --       are in lower case.
-  O.auto
+  (O.eitherReader $ \case
+    s | s == optionStreams -> Right Streams
+    s | s == optionInline -> Right Inline
+    s ->
+      Left
+        $  "'"
+        ++ s
+        ++ "' is not a valid option, valid options are '"
+        ++ optionStreams
+        ++ "' and '"
+        ++ optionInline
+        ++ "'."
+  )
   (  O.long "variant"
+  <> O.metavar (optionStreams ++ '|' : optionInline)
   <> O.help
        "The algorithm to use. See the doumentation in 'Scene.Trace' for more details."
   <> O.value Streams

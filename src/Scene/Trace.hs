@@ -62,12 +62,16 @@ type RayResult = (V2 Int, Color, Word32)
 --      implemented here, but it does give a good indication as to how fast the
 --      algorithm would be with ideal array fusion. As such this algorithm is
 --      much faster than the stream based implementation.
---
--- TODO: Make the command line option use lowercase names and have it print out
---       the available options like clap would.
-data Algorithm = Streams | Inline deriving (P.Read, P.Show)
+data Algorithm = Streams | Inline
 
--- instance Read Algorithm where
+instance Show Algorithm where
+  show Streams = optionStreams
+  show Inline = optionInline
+
+-- These are also used for the command line options
+optionStreams, optionInline :: P.String
+optionStreams = "streams"
+optionInline = "inline"
 
 -- | The maximum number of bounces a ray can make.
 maxIterations :: Exp Int
