@@ -251,24 +251,15 @@ traceStep scene state =
           T5 ray (checkHit scene ray) pixel throughput seed
         )
         state
-      -- FIXME: Expand breaks when expanding to 0 elements total, this should be
-      --        fixed in Accelerate itself
-      -- newState = expand
-      --   (\(T5 _ intersection _ throughput _) ->
-      --     numNewRays intersection throughput
-      --   )
-      --   intersections
-      newState = map computeNewRay $ afst $ filter
+      newState = expand
         (\(T5 _ intersection _ throughput _) ->
           numNewRays intersection throughput
         )
+        computeNewRay
         intersections
-      -- results = expand
-      --   (\(T5 _ intersection _ _ _) -> maybe 0 (const 1) intersection)
-      --   computeResult
-      --   intersections
-      results = map computeResult $ afst $ filter
-        (\(T5 _ intersection _ _ _) -> maybe False_ (const True_) intersection)
+      results = expand
+        (\(T5 _ intersection _ _ _) -> maybe 0 (const 1) intersection)
+        computeResult
         intersections
   in  T2 newState results
  where
@@ -278,9 +269,9 @@ traceStep scene state =
   -- can ignore the integer argument for now.
   computeNewRay
     :: Exp (RayF, Maybe (NormalP, Material), V2 Int, V3 Float, Word32)
-    -- -> Exp Int
+    -> Exp Int
     -> Exp RayState
-  computeNewRay (T5 ray intersection pixel throughput seed) =
+  computeNewRay (T5 ray intersection pixel throughput seed) _ =
     let T2 iNormal iMaterial           = fromJust intersection
         -- TODO: When adding diverging rays, we should make sure to change the
         --       seed here
@@ -291,9 +282,9 @@ traceStep scene state =
   -- to be used with 'expand' and assumes that there has been an intersection.
   computeResult
     :: Exp (RayF, Maybe (NormalP, Material), V2 Int, V3 Float, Word32)
-    -- -> Exp Int
+    -> Exp Int
     -> Exp RayResult
-  computeResult (T5 _ intersection pixel throughput seed) =
+  computeResult (T5 _ intersection pixel throughput seed) _ =
     let T2 _ iMaterial = fromJust intersection
         mColor         = iMaterial ^. color
         emittance      = mColor ^* (iMaterial ^. illuminance)
@@ -305,11 +296,9 @@ traceStep scene state =
 --
 -- TODO: Since we only support purely diffuse and specular materials at the
 --       moment this only returns 0 or 1.
--- FIXME: Expand breaks when expanding to 0 elements total, so this now returns
---        a boolean rather than an integer
-numNewRays :: Exp (Maybe (NormalP, Material)) -> Exp (V3 Float) -> Exp Bool
+numNewRays :: Exp (Maybe (NormalP, Material)) -> Exp (V3 Float) -> Exp Int
 numNewRays iMaterial throughput =
-  if nearZero throughput || isNothing iMaterial then False_ else True_
+  if nearZero throughput || isNothing iMaterial then 0 else 1
 
 -- | Calculate the amount of light that a given ray would collect when shot into
 -- the scene. In other words, calculate what color the pixel that corresponds to
