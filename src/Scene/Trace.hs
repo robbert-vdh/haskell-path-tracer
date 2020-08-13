@@ -251,6 +251,10 @@ traceStep scene state =
           T5 ray (checkHit scene ray) pixel throughput seed
         )
         state
+      -- FIXME: On the GPU backend this use of expand seems to a) cause the
+      --        render to stall at a certain moment and b) adds some kind of
+      --        noise that's not present on the CPU version. This is probably a
+      --        bug in accelerate-llvm-ptx.
       newState = expand
         (\(T5 _ intersection _ throughput _) ->
           numNewRays intersection throughput
