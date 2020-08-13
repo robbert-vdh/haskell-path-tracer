@@ -135,6 +135,10 @@ main = do
                                , _resultCamera  = initialCamera
                                }
 
+  putStrLn
+    $  "Using the '"
+    ++ show arguments
+    ++ "' algorithm, see 'tracer --help' for more options"
   putStrLn ""
   putStrLn "          Camera Controls"
   putStrLn "  ───────────────────────────────"
