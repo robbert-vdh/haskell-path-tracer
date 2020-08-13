@@ -16,6 +16,11 @@ import           Data.Array.Accelerate         as A
                                          hiding ( pattern V2
                                                 , pattern V3
                                                 )
+import           Data.Array.Accelerate.Data.Bits
+                                                ( unsafeShiftL
+                                                , unsafeShiftR
+                                                , xor
+                                                )
 import qualified Data.Array.Accelerate.Sugar.Shape
                                                as S
 import           Data.Array.Accelerate.Control.Lens
@@ -111,9 +116,9 @@ vecToFloat = fmap toFloating
 
 -- ** RNG
 
--- | Use a linear congruential pseudo random number generator to generate a
--- 'Float' from a seed. The result consists of the generated float and a new
--- seed. The generated floats are in the `[-1, 1]` range.
+-- | Use an xorshift pseudo random number generator to generate a 'Float' from a
+-- seed. The result consists of the generated float and a new seed. The
+-- generated floats are in the `[-1, 1]` range.
 --
 -- The function returns a tuple of 'Exp's instead of a single 'Exp' tuple so we
 -- can make use of the state monad.
@@ -126,12 +131,11 @@ genFloat = P.uncurry T2 . genFloat'
 genFloat' :: Exp Word32 -> (Exp Float, Exp Word32)
 genFloat' seed = (nextFloat, nextSeed)
  where
-  multiplier = 1664525
-  increment  = 1013904223
+  seed'     = seed `xor` (seed `unsafeShiftL` 13)
+  seed''    = seed' `xor` (seed' `unsafeShiftR` 17)
+  nextSeed  = seed'' `xor` (seed'' `unsafeShiftL` 5)
 
-  -- We use 2^32 as a modulus so we can simply let the result wrap around
-  nextSeed   = (multiplier * seed) + increment
-  nextFloat  = fromIntegral nextSeed / (2 ** 31) - 1
+  nextFloat = fromIntegral nextSeed / (2 ** 31) - 1
 
 -- | Generate a random vector whose three values are in the range @[-1, 1]@.
 -- This value can be used to create a quaternion for rotation a vector.
