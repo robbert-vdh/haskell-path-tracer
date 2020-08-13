@@ -116,7 +116,7 @@ cliOptions = O.option
   <> O.metavar (optionStreams ++ '|' : optionInline)
   <> O.help
        "The algorithm to use. See the doumentation in 'Scene.Trace' for more details."
-  <> O.value Streams
+  <> O.value Inline
   )
 
 main :: IO ()
