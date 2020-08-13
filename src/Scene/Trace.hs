@@ -117,8 +117,6 @@ maxIterations = 15
 --        concatenate a bunch of vectors we'll do this as part of the iteration
 --        cycle.
 --
--- FIXME: The RNG seeds get mseed up now, can we fix this?
---
 -- * 'Inline'
 --
 -- This approach is much simpler, and maps every pixel to a color value as part
@@ -143,7 +141,7 @@ render Streams screen camera acc =
           in  T3 state' results' iterations'
         )
         (T3 initialState acc (unit (0 :: Exp Int)))
-  in  finalResults
+  in  map updateSeed finalResults
  where
   -- TODO: Can we avoid this @map snd@ by using a tuple? We would probably need
   --       to do two permutes in that case.
@@ -168,16 +166,22 @@ render Streams screen camera acc =
   -- the pixel value here since we have to match 'acc', but we can just look
   -- them up again in the original 'finalResults' in the index mapping step.
   --
-  -- TODO: I think this may be the bottleneck.
-  -- TODO: Probably use xor for combining the seeds
+  -- Because there's no guarantee that seeds are unique we use `updateSeed`
+  -- after the final iteration to update the RNG seeds for the next rendering
+  -- cycle.
   combine :: Acc RenderResult -> Acc (Vector RayResult) -> Acc RenderResult
   combine results newResults = permute
-    (\(T2 lColor lSeed) (T2 rColor rSeed) ->
-      T2 (lColor + rColor) (lSeed + rSeed)
-    )
+    (\(T2 lColor seed) (T2 rColor _) -> T2 (lColor + rColor) seed)
     results
     (\idx -> let T3 (V2_ x y) _ _ = newResults ! idx in Just_ $ index2 y x)
     (map (\(T3 _ c seed) -> T2 c seed) newResults)
+
+  -- Generate a new RNG seed. Used after the rendering loop since we have no
+  -- guarantees that the seeds from the results matrix are unique.
+  --
+  -- TODO: Is ts there a way around this?
+  updateSeed :: Exp (Color, Word32) -> Exp (Color, Word32)
+  updateSeed (T2 c seed) = T2 c (P.snd $ genFloat' seed)
 
 render Inline screen camera acc = zipWith
   (\(T2 new seed') (T2 old _) -> T2 (new + old) seed')
