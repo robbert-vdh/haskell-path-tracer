@@ -63,7 +63,8 @@ type RayResult = (V2 Int, Color, Word32)
 --      algorithm would be with ideal array fusion. As such this algorithm is
 --      much faster than the stream based implementation.
 --
--- TODO: Actually add the inlined verison back
+-- TODO: Make the command line option use lowercase names and have it print out
+--       the available options like clap would.
 data Algorithm = Streams | Inline deriving (P.Read, P.Show)
 
 -- instance Read Algorithm where
@@ -79,6 +80,14 @@ maxIterations = 15
 --
 -- You can change the algorithms by passing a different variant of 'Algorithm'.
 -- See below for more detailed explanations of the algorithms.
+--
+-- Because if the way Accelerate is structured, the recurrent formulation of the
+-- resulting color values has to be inverted. Instead of returning @emittance +
+-- (brdf * next_step_emittance@, we do @old_result + (emittance * throughput)@
+-- at every step, where throughput is a comulative product of the BRDFs,
+-- probability density functions and material colors. Essentially we're just
+-- rewriting the typical head recursive formulation to tail recursion so we can
+-- use regular loops instead.
 --
 -- * 'Streams'
 --
@@ -105,27 +114,19 @@ maxIterations = 15
 --        iterations or there are no new rays being produced.
 --     5. Finally we add the produced color values for each pixel to the
 --        accumulated results from the previous frame. To prevent having to
---        concatenate a bunch of arrays we'll do this as part of the iteration
+--        concatenate a bunch of vectors we'll do this as part of the iteration
 --        cycle.
---
---        TODO: If accelerate can parallelize these kernels properly we can do
---              this summing step during step 3 so we don't have to do it all at
---              the end. That would also avoid having to concatenate a lot of
---              arrays.
---
--- Because if the way Accelerate is structured, the recurrent formulation of the
--- resulting colors had to be inverted. Instead of returning @emittance + (brdf
--- * traceRay (limit - 1) scene nextRay)@, we return @old_result + (emittance *
--- throughput)@, where throughput is a comulative product of the BRDFs,
--- probability density functions and material colors.
 --
 -- FIXME: The RNG seeds get mseed up now, can we fix this?
 --
 -- * 'Inline'
 --
--- TODO:
---
--- TODO: Reword the above with updated function and value names
+-- This approach is much simpler, and maps every pixel to a color value as part
+-- of a single map operation. This does mean that some effects that require rays
+-- to split into multiple rays, such as refraction, are not possible. Because
+-- everything happens inside of a single map operation this approach is much
+-- faster than the first because there's much less communication involved and
+-- all ray tracing operations are fused into a single kernel.
 render
   :: Algorithm
   -> Acc (Matrix (V2 Int)) -- ^ Screen pixel coordinates
@@ -157,8 +158,6 @@ render Streams screen camera acc =
 
   -- | We stop iterating after there are no more rays or if we reach the
   -- iterations limit, whichever comes first.
-  --
-  -- TODO: Can we use 'null' this way?
   notFinished
     :: Acc (Vector RayState, RenderResult, Scalar Int) -> Acc (Scalar Bool)
   notFinished (T3 state _ iterations) = if not (null state)
@@ -180,8 +179,14 @@ render Streams screen camera acc =
     (\idx -> let T3 (V2_ x y) _ _ = newResults ! idx in Just_ $ index2 y x)
     (map (\(T3 _ c seed) -> T2 c seed) newResults)
 
-render Inline _screen _camera _acc =
-  error "TODO: Add this back in from an earlier commit"
+render Inline screen camera acc = zipWith
+  (\(T2 new seed') (T2 old _) -> T2 (new + old) seed')
+  result
+  acc
+ where
+  rays   = primaryRays (the camera) screen
+  seeds  = map snd acc
+  result = map (traceInline 15 mainScene) $ zip rays seeds
 
 -- | Calculate the origin and directions of the primary rays based on a camera
 -- and a matrix of screen pixel positions. These positions should be in the
@@ -305,6 +310,58 @@ traceStep scene state =
 numNewRays :: Exp (Maybe (NormalP, Material)) -> Exp (V3 Float) -> Exp Bool
 numNewRays iMaterial throughput =
   if nearZero throughput || isNothing iMaterial then False_ else True_
+
+-- | Calculate the amount of light that a given ray would collect when shot into
+-- the scene. In other words, calculate what color the pixel that corresponds to
+-- the ray should be. This performs the entire ray tracing algorithm in a single
+-- step, with the downside that a ray can only produce at most one new ray.
+--
+-- TODO: Test if there's any performance loss when using 'while' instead of
+--       'iterate'. This whould allow us to use russian roulette to reduce the
+--       algorithm's bias.
+-- TODO: I feel like some things are normalized when they shouldn't be. Diffuse
+--       spheres look like they have a ring of bright light on them, but I feel
+--       like it stops too abruptly for it to just be diffusion.
+traceInline :: Exp Int -> Scene -> Exp (RayF, Word32) -> Exp (Color, Word32)
+traceInline limit scene primaryRay =
+  let T3 (T2 _ seed) result _ = iterate
+        limit
+        prepareRay
+        (T3 primaryRay initialColor initialThroughput)
+  in  T2 result seed
+ where
+  initialColor, initialThroughput :: Exp (V3 Float)
+  initialColor      = V3_ 0.0 0.0 0.0
+  initialThroughput = V3_ 1.0 1.0 1.0
+
+  -- | Check whether the ray has hit something. If it did, call `computeRay` to
+  -- calculate the resulting color value and to prepare the next ray after
+  -- bouncing.
+  prepareRay
+    :: Exp ((RayF, Word32), Color, V3 Float)
+    -> Exp ((RayF, Word32), Color, V3 Float)
+  prepareRay current@(T3 (T2 ray seed) result throughput) =
+    let nextHit = checkHit scene ray
+    in  if nearZero throughput || isNothing nextHit
+          then T3 (T2 ray seed) result (V3_ 0.0 0.0 0.0)
+          else computeRay current $ fromJust nextHit
+
+  -- | Calculate the currently accumulated color and throughput as well as the
+  -- next ray after we have intersected with something.
+  computeRay
+    :: Exp ((RayF, Word32), Color, V3 Float)
+    -> Exp (NormalP, Material)
+    -> Exp ((RayF, Word32), Color, V3 Float)
+  computeRay (T3 (T2 ray seed) result throughput) (T2 iNormal iMaterial) =
+    let
+      -- TODO: Extract this to a function as it's the same as in 'tracestep'
+        mColor                         = iMaterial ^. color
+        emittance                      = mColor ^* (iMaterial ^. illuminance)
+
+        T3 nextRay throughputMod seed' = calcNextRay iMaterial iNormal ray seed
+    in  T3 (T2 nextRay seed')
+           (result + (emittance * throughput))
+           (throughput * throughputMod)
 
 -- | Calculate a next ray and throughput modifier based on an intersected
 -- primitive's material, the intersection point, the normal at the intersection
