@@ -32,7 +32,6 @@ import           Control.Concurrent
 import           Control.Lens
 import           Control.Monad.IO.Class
 import           Control.Monad.State.Strict
-import qualified Data.Array.Accelerate         as A
 import qualified Data.Array.Accelerate.IO.Data.Vector.Storable
                                                as A
 import           Data.ByteString.Char8          ( ByteString )
@@ -69,7 +68,8 @@ import           Util
 -- | A compiled rendering function for a specific camera position and
 -- orientation. We store this function next to the other rendering data for
 -- simplicity's sake. See 'compileFor' for more information.
-type CompiledFunction = (Int, RenderResult) -> (Int, RenderResult)
+type CompiledFunction
+  = Camera -> (Int, RenderResult) -> (Int, RenderResult)
 
 -- | The rendering results. The resulting 'Color' matrix should be divided by
 -- the number of iterations in order to obtain the final averaged image.
@@ -78,8 +78,7 @@ type CompiledFunction = (Int, RenderResult) -> (Int, RenderResult)
 -- here since the former is dependant on the parsed command line arguments, and
 -- the latter has to be updated whenever the camera position changes.
 data Result = Result
-  { _resultCompile :: A.Scalar Camera -> CompiledFunction
-  , _resultCompute :: CompiledFunction
+  { _resultCompute :: CompiledFunction
   , _resultValue   :: (Int, RenderResult)
   , _resultCamera  :: Camera
   }
@@ -129,12 +128,10 @@ main = do
                                 $ defaultOpenGL { glProfile = Core Normal 3 3 }
     }
 
-  let compile' = compileFor arguments
-      compute' = compile' $ scalar initialCamera
+  let compute' = compileFor arguments
   seeds   <- initialOutput
-  mResult <- newMVar $! Result { _resultCompile = compile'
-                               , _resultCompute = compute'
-                               , _resultValue   = compute' (0, seeds)
+  mResult <- newMVar $! Result { _resultCompute = compute'
+                               , _resultValue   = compute' initialCamera (0, seeds)
                                , _resultCamera  = initialCamera
                                }
 
@@ -156,13 +153,11 @@ main = do
 
 -- | Create a function for rendering a single sample based on the current camera
 -- position. This function is meant to be reused until the 'Camera' position
--- gets updated. This way Accelerate does not have to recompile every frame
---
--- TODO: Make the algorithm selectable through a command line option
-compileFor :: Options -> A.Scalar Camera -> CompiledFunction
-compileFor config !c =
+-- gets updated. This way Accelerate does not have to recompile every frame.
+compileFor :: Options -> CompiledFunction
+compileFor !config =
   let dewit = runN (render config) screenPixels
-  in  \(!iterations, !acc) -> (iterations + 1, dewit c acc)
+  in  \(!c) (!iterations, !acc) -> (iterations + 1, dewit (scalar c) acc)
 
 -- | Perform the actual path tracing. This is done in a seperate thread that
 -- shares and 'MVar' with the rendering thread to prevent one of the processes
@@ -181,8 +176,8 @@ computationLoop mResult = flip evalStateT reseedInterval $ forever $ do
     -- TODO: Get rid of this hack
     let batchSize                = max 30 $ (result ^. value . _1) `div` 50
         value'@(!iterations, !_) = if (result ^. value . _1) > 100
-          then doTimes batchSize (result ^. compute) (result ^. value)
-          else (result ^. compute) (result ^. value)
+          then doTimes batchSize (result ^. compute $ result ^. camera) (result ^. value)
+          else ((result ^. compute) (result ^. camera) (result ^. value))
         !result' = result & value .~ value'
 
     void $! putMVar mResult $! result'
@@ -285,10 +280,8 @@ inputLoop mResult = time >>= go
           updatedCamera = result ^. camera & rotation' +~ rotation
                                            & rotation' %~ clampRoll
                                            & translate translation
-          compute' = result ^. compile $ scalar updatedCamera
-          !result' = result & value .~ compute' (0, emptyOutput)
+          !result' = result & value .~ (result ^. compute) updatedCamera (0, emptyOutput)
                             & camera .~ updatedCamera
-                            & compute .~ compute'
 
       putMVar mResult $! result'
 
