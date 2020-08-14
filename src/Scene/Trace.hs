@@ -371,6 +371,8 @@ traceInline limit scene primaryRay =
 -- The resulting value is a pair of @(next_ray, throughput_modifier, next_seed)@. The
 -- throughput modifier has to be multiplied with the old throughput to obtain
 -- the new throughput values.
+--
+-- TODO: These these formulas, they're definitely not correct
 calcNextRay
   :: Exp Material
   -> Exp NormalP
@@ -381,17 +383,19 @@ calcNextRay iMaterial (Ray_ iPoint iNormal) ray seed =
   let
     T2 rotationVector seed' = genVec seed
     T2 nextDirection  brdf' = (iMaterial ^. brdf) & match \case
-      -- Diffuse objects are modeled through Lambartian reflectance. The
+      -- Matte objects are modeled through Lambartian reflectance. The
       -- next ray should be fired somewhere in the hemisphere of the
       -- intersected primitives' normal.
-      Diffuse_ p ->
+      Matte_ p ->
         let next = rotate (anglesToQuaternion $ pi *^ rotationVector) iNormal
             b    = p / pi * (next `dot` iNormal)
         in  T2 next b
-      -- The glossy model uses the Blinn-Phong reflection model.
+      -- The glossy model uses the Blinn-Phong shading model.
+      --
       -- TODO: Find out what the correct way to scale the
       --       'rotationVector' is. Right now I've chosen it in such a
       --       way that @p = 0@ results in mirror-like behaviour.
+      -- TODO: This is incorrect when @p != 1@
       Glossy_ p ->
         let
           intersectionAngle = (ray ^. direction) `dot` iNormal

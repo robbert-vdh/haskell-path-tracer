@@ -40,12 +40,20 @@ type Direction = V3 Float
 type Color = V3 Float
 type Noraml = (Point, Direction)
 
+-- | The whole described as lists of primitives.
+--
+-- TODO: We should also be able to support:
+--       - Axis aligned boxes
+--       - Finite planes
+--       - Oriented boxes
+--       - Triangles (this will require some acceleration structure)
 data Scene = Scene
   { _sceneSpheres :: [Exp Sphere]
   , _scenePlanes  :: [Exp Plane]
   }
   deriving Typeable
 
+-- | The camera from which rays are being cast into the scene.
 data Camera = Camera
   { _cameraPosition :: Point
   -- | The camera's rotation expressed in @(roll, pitch, yaw)@ Euler angles.
@@ -55,18 +63,32 @@ data Camera = Camera
   }
   deriving (P.Eq, Show, Generic, Elt)
 
+-- | Determines how a material reflects light.
 data Brdf
-  = Diffuse {-# UNPACK #-} Float
+  -- | For matte diffuse materials, implemented through Lambartian reflectance.
+  -- The parammeter should be in the range @(0, pi)@ and determines how much
+  -- bounced light the material will gather.
+  = Matte {-# UNPACK #-} Float
+  -- | For glossy surfaces, implemented using Blinn-Phong shading. The parameter
+  -- determines how reflective the material is and should be in the range @(0,
+  -- 1)@. A value of 1 results in a perfect mirror-like surface, and lower
+  -- make the lighting more diffuse.
   | Glossy {-# UNPACK #-} Float
   deriving (P.Eq, Show, Generic, Elt)
 
+-- | A primitive's material.
 data Material = Material
+  -- | A material's natural color. This is the color of the light it emits if
+  -- the illuminance is non-zero, and this also controls light absorption.
   { _materialColor       :: {-# UNPACK #-} Color
+  -- | The amount of light the object emits.
   , _materialIlluminance :: {-# UNPACK #-} Float
+  -- | The BRDF to use for this material, see 'Brdf'.
   , _materialBrdf        :: Brdf
   }
   deriving (P.Eq, Show, Generic, Elt)
 
+-- | An infinite plane.
 data Plane = Plane
   { _planePosition  :: {-# UNPACK #-} Point
   , _planeDirection :: {-# UNPACK #-} Direction
@@ -76,7 +98,8 @@ data Plane = Plane
 
 -- | Any ray that is cast through the scene. This is defined as a type alias as
 -- the 'Ray' has to be polymorphic in order to to be able to lift a @Ray (Exp
--- (V3 Float)) (Exp (V3 Float))@ into a @Exp (Ray (V3 Float) (V3 Float))@.
+-- (V3 Float)) (Exp (V3 Float))@ into a @Exp (Ray (V3 Float) (V3 Float))@. We
+-- end up using only 'RayF'.
 data Ray a = Ray
   { _rayOrigin    :: V3 a
   , _rayDirection :: V3 a
@@ -88,6 +111,7 @@ type RayF = Ray Float
 -- intersection).
 type NormalP = RayF
 
+-- | A sphere.
 data Sphere = Sphere
   { _spherePosition :: {-# UNPACK #-} Point
   , _sphereRadius   :: {-# UNPACK #-} Float

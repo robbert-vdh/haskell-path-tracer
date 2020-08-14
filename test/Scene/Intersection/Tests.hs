@@ -136,7 +136,7 @@ makePlane pos nor = constant $ Plane { _planeDirection = nor
 dummyMaterial :: Material
 dummyMaterial = Material { _materialColor       = V3 1.0 1.0 1.0
                          , _materialIlluminance = 1.0
-                         , _materialBrdf        = Diffuse 1.0
+                         , _materialBrdf        = Matte 1.0
                          }
 
 -- | Round a number to a certain number of places. Uesful in comparisons.

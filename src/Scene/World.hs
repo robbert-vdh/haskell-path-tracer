@@ -21,7 +21,7 @@ mainScene = Scene (map A.constant spheres') (map A.constant planes')
       , _sphereRadius   = 5.0
       , _sphereMaterial = Material { _materialColor       = V3 1.0 0.3 0.3
                                    , _materialIlluminance = 0.0
-                                   , _materialBrdf        = Diffuse 0.8
+                                   , _materialBrdf        = Matte 0.8
                                    }
       }
     , Sphere
@@ -29,7 +29,7 @@ mainScene = Scene (map A.constant spheres') (map A.constant planes')
       , _sphereRadius   = 1.5
       , _sphereMaterial = Material { _materialColor       = V3 0.0 0.4 0.0
                                    , _materialIlluminance = 0.0
-                                   , _materialBrdf        = Diffuse 0.9
+                                   , _materialBrdf        = Matte 0.9
                                    }
       }
     , Sphere
@@ -53,7 +53,7 @@ mainScene = Scene (map A.constant spheres') (map A.constant planes')
       , _sphereRadius   = 2.0
       , _sphereMaterial = Material { _materialColor       = V3 0.99 0.84 0.12
                                    , _materialIlluminance = 4420.0
-                                   , _materialBrdf        = Diffuse 1.0
+                                   , _materialBrdf        = Matte 1.0
                                    }
       }
     ]
@@ -63,7 +63,7 @@ mainScene = Scene (map A.constant spheres') (map A.constant planes')
       , _planePosition  = V3 0.0 (-3.0) 0.0
       , _planeMaterial  = Material { _materialColor       = V3 0.43 0.95 0.5
                                    , _materialIlluminance = 0.0
-                                   , _materialBrdf        = Diffuse 1.5
+                                   , _materialBrdf        = Matte 1.5
                                    }
       }
     , Plane
