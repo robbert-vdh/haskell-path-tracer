@@ -290,6 +290,8 @@ inputLoop mResult = time >>= go
       -- last frame and whether the shift key is being held down. We'll
       -- normalize the distance here so that strafing while moving forward moves
       -- you the same distance as moving in only one direction would.
+      --
+      -- FIXME: Lookup up and down also seems to cause other distortions
       let (\v -> normalize v ^* movementDistance -> translation, rotation) =
             deltas
           updatedCamera = result ^. camera & rotation' +~ rotation

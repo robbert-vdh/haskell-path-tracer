@@ -388,6 +388,8 @@ calcNextRay iMaterial (Ray_ iPoint iNormal) ray seed =
       -- intersected primitives' normal.
       Matte_ p ->
         let next = rotate (anglesToQuaternion $ pi *^ rotationVector) iNormal
+            -- FIXME: Really figure out how this should be scaled, I feel like
+            --        this is wrong.
             b    = p / pi * (next `dot` iNormal)
         in  T2 next b
       -- The glossy model uses the Blinn-Phong shading model.
@@ -404,7 +406,7 @@ calcNextRay iMaterial (Ray_ iPoint iNormal) ray seed =
             rotate (anglesToQuaternion $ (1 - p) *^ rotationVector) reflection
           -- This has to be clamped to 0 as 'next' may be pointing in to
           -- the area behind the intersection
-          b = max 0 $ p * (next `dot` reflection)
+          b = max 0 $ next `dot` reflection
         in
           T2 next b
 
