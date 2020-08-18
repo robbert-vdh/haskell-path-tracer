@@ -150,6 +150,10 @@ main = do
     $  "Using the '"
     ++ show arguments
     ++ "' algorithm, see 'tracer --help' for more options"
+  when (arguments == Streams) $ putStrLn
+    $  "\nWARNING: The streams algorithm is slow and currently does not "
+    ++ "work properly with the CUDA backend"
+
   putStrLn ""
   putStrLn "          Camera Controls"
   putStrLn "  ───────────────────────────────"

@@ -62,7 +62,7 @@ type RayResult = (V2 Int, Color, Word32)
 --      implemented here, but it does give a good indication as to how fast the
 --      algorithm would be with ideal array fusion. As such this algorithm is
 --      much faster than the stream based implementation.
-data Algorithm = Streams | Inline
+data Algorithm = Streams | Inline deriving (P.Eq)
 
 instance Show Algorithm where
   show Streams = optionStreams
