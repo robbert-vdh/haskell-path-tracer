@@ -202,9 +202,18 @@ render Inline screen camera acc = zipWith
 primaryRays :: Exp Camera -> Acc (Matrix (V2 Int)) -> Acc (Matrix RayF)
 primaryRays (Camera_ cPos cRot (fromIntegral -> cFov)) = map transform
  where
-  -- | The distance between the camera and the virtual screen plane
+  -- | The angle from the camera between the center of the screen, and the
+  -- screen's right most edge.
+  screenAngle :: Exp Float
+  screenAngle = (cFov * pi / 180.0) / 2.0
+
+  -- | The distance between the camera and the virtual screen plane.
   screenDistance :: Exp Float
-  screenDistance = 1.0 / tan ((cFov * pi / 180.0) / 2.0)
+  screenDistance = 1.0 / tan screenAngle
+
+  -- | Half the horizontal width of the screen plane.
+  screenHalfWidth :: Exp Float
+  screenHalfWidth = tan screenAngle * screenDistance
 
   -- | The looking direciton of the camera.
   cDir :: Exp Direction
@@ -218,8 +227,10 @@ primaryRays (Camera_ cPos cRot (fromIntegral -> cFov)) = map transform
   planeCenter, planeTopOffset, planeRightOffset :: Exp (V3 Float)
   (planeCenter, planeTopOffset, planeRightOffset) =
     let center       = cPos + cDir ^* screenDistance
-        centerOffset = normalize $ center - cPos
-        rightOffset  = centerOffset `cross` constant upVector
+        centerOffset = center - cPos
+        -- TODO: There's probably a better way to make sure the length is
+        --       correct that doesn't involve normalizing
+        rightOffset  = normalize (centerOffset `cross` constant upVector) ^/ screenHalfWidth
         topOffset    = (cDir `cross` rightOffset) ^/ screenAspect
     in  (center, topOffset, rightOffset)
 
