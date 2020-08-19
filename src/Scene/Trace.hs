@@ -224,6 +224,10 @@ primaryRays (Camera_ cPos cRot (fromIntegral -> cFov)) = map transform
   -- point on this virtual plane. We can then simply calculate the ray's
   -- direction by drawing a line between the camera's origin and the point we've
   -- calculated.
+  --
+  -- FIXME: The CPU backend sometimes has weird artifacts that look like they
+  --        result from these values sometimes being wrong. Is this another
+  --        memory corruption issue?
   planeCenter, planeTopOffset, planeRightOffset :: Exp (V3 Float)
   (planeCenter, planeTopOffset, planeRightOffset) =
     let center       = cPos + cDir ^* screenDistance
