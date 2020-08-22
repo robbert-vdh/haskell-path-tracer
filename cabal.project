@@ -11,7 +11,7 @@ package accelerate
 source-repository-package
     type: git
     location: https://github.com/AccelerateHS/accelerate.git
-    tag: cc4ae666548cb0340e6eb30de41ca6b869e8809b
+    tag: b54ce53cff506ba9e9edab21f7a37c3dfbd96173
 
 -- accelerate-io-*-0.1.0.0+
 source-repository-package
@@ -32,7 +32,7 @@ source-repository-package
 source-repository-package
     type: git
     location: https://github.com/AccelerateHS/accelerate-llvm.git
-    tag: 631a4a16478d5a38494131188ca77a2b85036e5c
+    tag: b2862f43ad89b74236d6d9bb91b655c2262e1125
     subdir:
         accelerate-llvm
         accelerate-llvm-native

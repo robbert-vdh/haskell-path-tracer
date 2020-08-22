@@ -9,7 +9,6 @@ module Scene.Intersection where
 
 import           Data.Array.Accelerate
 import           Data.Array.Accelerate.Control.Lens
-import           Data.Array.Accelerate.Data.Maybe
 import           Data.Array.Accelerate.Linear
 
 import           Scene.Objects

@@ -40,6 +40,14 @@ type Direction = V3 Float
 type Color = V3 Float
 type Noraml = (Point, Direction)
 
+-- | An axis aligned box, also used as a bounding box to speed up intersection
+-- tests with spheres.
+data AxisAlignedBox = AxisAlignedBox
+  { _axisAlignedBoxOrigin   :: Point
+  , _axisAlignedBoxSize     :: Direction
+  , _axisAlignedBoxMaterial :: Material
+  }
+
 -- | The whole described as lists of primitives.
 --
 -- TODO: We should also be able to support:
