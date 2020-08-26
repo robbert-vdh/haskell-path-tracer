@@ -164,7 +164,7 @@ render Streams screen camera acc =
     :: Acc (Vector RayState, RenderResult, Scalar Int) -> Acc (Scalar Bool)
   notFinished (T3 state _ iterations) = if not (null state)
     then unit True_
-    else map (\n -> n <= maxIterations && not (null state)) iterations
+    else map (\n -> n <= maxIterations) iterations
 
   -- | Add the newly calculated color values to the previous results. We lose
   -- the pixel value here since we have to match 'acc', but we can just look
