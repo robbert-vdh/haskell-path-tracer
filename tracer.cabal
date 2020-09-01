@@ -33,7 +33,6 @@ library
 
     exposed-modules:
         Data.Array.Accelerate.Linear.Projection
-        Debug
         Lib
         Scene.Intersection
         Scene.Objects
