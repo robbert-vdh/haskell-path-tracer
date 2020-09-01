@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE LambdaCase #-}
@@ -53,8 +54,14 @@ import qualified SDL
 import           System.IO
 import           System.IO.Temp
 
+#ifdef USE_CPU_BACKEND
+import           Data.Array.Accelerate.LLVM.Native
+                                                ( runN )
+#else
+import           Data.Array.Accelerate.LLVM.PTX ( runN )
+#endif
+
 import qualified Files
-import           Lib
 import           Scene.Trace
 import           Scene.Objects                  ( Camera
                                                 , Direction

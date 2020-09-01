@@ -33,7 +33,6 @@ library
 
     exposed-modules:
         Data.Array.Accelerate.Linear.Projection
-        Lib
         Scene.Intersection
         Scene.Objects
         Scene.Trace
@@ -49,18 +48,8 @@ library
         mwc-random ^>=0.14.0.0,
         mtl ^>=2.2.2,
 
-    -- We don't need to compile the Accelerate backend we're not using. If we
-    -- don't do this, you won't be able to compile the CPU version without
-    -- having the CUDA toolchain installed.
-    if flag(Cpu)
-        build-depends: accelerate-llvm-native ^>=1.4.0.0
-        cpp-options:   -DUSE_CPU_BACKEND'
-    else
-        build-depends: accelerate-llvm-ptx ^>=1.4.0.0
-
     other-extensions:
         ConstraintKinds
-        CPP
         DefaultSignatures
         DeriveAnyClass
         DeriveGeneric
@@ -117,12 +106,22 @@ executable tracer
         -- function not working properly
         temporary ^>=1.3,
 
+    -- We don't need to compile the Accelerate backend we're not using. If we
+    -- don't do this, you won't be able to compile the CPU version without
+    -- having the CUDA toolchain installed.
+    if flag(Cpu)
+        build-depends: accelerate-llvm-native ^>=1.4.0.0
+        cpp-options:   -DUSE_CPU_BACKEND'
+    else
+        build-depends: accelerate-llvm-ptx ^>=1.4.0.0
+
     other-modules:
         Files
         TH
 
     other-extensions:
         BangPatterns
+        CPP
         FlexibleInstances
         FunctionalDependencies
         LambdaCase
