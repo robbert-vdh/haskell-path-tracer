@@ -14,6 +14,8 @@ import           Data.Array.Accelerate.Linear
                                          hiding ( distance
                                                 , point
                                                 )
+import           Data.Array.Accelerate.LLVM.Native
+                                                ( run )
 import           Hedgehog
 import qualified Hedgehog.Gen                  as Gen
 import qualified Hedgehog.Range                as Range
@@ -21,7 +23,6 @@ import           Test.Tasty
 import           Test.Tasty.Hedgehog
 import qualified Linear                        as L
 
-import           Lib                            ( run )
 import           Scene.Intersection
 import           Scene.Objects
 
@@ -116,8 +117,10 @@ planeTests = testGroup
 
 -- | Evaluate a single Accelerate expression to a value. This is needed because
 -- we can't compare unevaluated expressions directly.
+--
+-- TODO: Refactor the tests to evaluate both the CUDA and CPU backends
 evalExp :: Elt a => Exp a -> a
-evalExp e = head $ A.toList $ run (unit e)
+evalExp e = head . A.toList $ run (unit e)
 
 makeSphere :: V3 Float -> Float -> Exp Sphere
 makeSphere pos diameter = constant $ Sphere { _spherePosition = pos

@@ -155,6 +155,7 @@ test-suite tracer-test
 
         base >=4.13 && <5.0,
         accelerate ^>=1.4.0.0,
+        accelerate-llvm-native ^>=1.4.0.0,
         hedgehog ^>=1.0.2,
         linear ^>=1.21.1,
         linear-accelerate ^>=0.8.0.0,
