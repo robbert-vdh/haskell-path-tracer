@@ -1,23 +1,19 @@
 packages:  .
 
--- TODO: Remove this after accelerate updates. Everything compiles just fine on
---       GHC 8.10.x.
-allow-newer: *:base, *:template-haskell
-
 package accelerate
     flags: +debug
 
--- accelerate-1.4.0.0+
+-- accelerate-1.3.0.0
 source-repository-package
     type: git
     location: https://github.com/AccelerateHS/accelerate.git
-    tag: 92ae4cda866ea8a47f9fcffac9eb62faba304cbd
+    tag: 162a779fe181589d493a2d447f1d2df88132986a
 
--- accelerate-io-*-0.1.0.0+
+-- accelerate-io-*-1.3.0.0
 source-repository-package
     type: git
     location: https://github.com/AccelerateHS/accelerate-io.git
-    tag: 1ba4c7db50c255b327e5d037c4c52bb0c1a297fc
+    tag: 3296eff27b6c5a8c6aa877a021e0c7e3378d829c
     subdir:
         accelerate-io
         accelerate-io-array
@@ -28,36 +24,36 @@ source-repository-package
         accelerate-io-repa
         accelerate-io-vector
 
--- accelerate-llvm-*-1.4.0.0+
+-- accelerate-llvm-*-1.3.0.0
 source-repository-package
     type: git
     location: https://github.com/AccelerateHS/accelerate-llvm.git
-    tag: 39ff9f53629009e480a71fcde1f1dac9259e5a8c
+    tag: 9289093724c5f5c6f0353ef0786d40c7abf851ac
     subdir:
         accelerate-llvm
         accelerate-llvm-native
         accelerate-llvm-ptx
 
--- cuda-0.10.1.1, required for accelerate-llvm-ptx
+-- cuda-0.10.2.0, required for accelerate-llvm-ptx
 source-repository-package
     type: git
     location: https://github.com/tmcdonell/cuda.git
-    tag: bf6efc8f9118caac91bde8c9535970f7ab645ead
+    tag: b80e277845b63e85495a641a9af7070ed4c30937
 
 -- nvvm-0.10.0.0, required for accelerate-llvm-ptx
 source-repository-package
     type: git
     location: https://github.com/tmcdonell/nvvm.git
-    tag: 219637eab3aab7275ce0a0c9b0e1855be912fe8a
+    tag: e7a9af7cde56886bea8a29048f41c5d15ec0af33
 
--- linear-accelerate-0.8.0.0+
+-- linear-accelerate-0.7.0.0
 source-repository-package
     type: git
     location: https://github.com/ekmett/linear-accelerate.git
-    tag: e0956017d938a05f2ef4180b364f4d2cd71eb5b9
+    tag: 7b2438c93add45e0ac884b09ff009036d3e540eb
 
 -- lens-accelerate-0.3.0.0
 source-repository-package
     type: git
     location: https://github.com/tmcdonell/lens-accelerate.git
-    tag: b74eb8098735b1ad6cff3c5655af03d3f29b9f8e
+    tag: 940c5cb3d9cd5d54f4b1fb7bdece6da38320a96f
