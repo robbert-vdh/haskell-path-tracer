@@ -6,7 +6,9 @@ A simple path tracing implementation written in Haskell using
 This has recently been rewritten to make better use of streams so it can be
 parallelized better and so we can support features that require splitting rays
 such as refraction. At the moment the new implementation is still significantly
-slower than the old one.
+slower than the old one. **After updating Accelerate this version also seems to
+produce NaN values andI will either freeze or segfault depending on the backend
+used.**
 
 ## Building
 
