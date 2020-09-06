@@ -78,7 +78,7 @@ maxIterations :: Exp Int
 maxIterations = 15
 
 -- | Render a single sample, combining the previous results with the newly
--- generated sample. In the application, we use the 'compileFor' function to fix
+-- generated sample. In the application, we use the @compileFor@ function to fix
 -- the first two arguments since those won't ever change until we have to reset
 -- the computations because the camera was moved.
 --

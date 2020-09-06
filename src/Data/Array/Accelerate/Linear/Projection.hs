@@ -6,7 +6,7 @@
 -- functions in 'Linear.Projection' but with their terms lifted to 'Exp's. This
 -- is needed as the 'Epsilon' type classes from 'Linear.Epsilon' and
 -- 'Data.Array.Accelerate.Linear.Epsilon' are not compatible, and as such we
--- can't make use of the `liftN` functions.
+-- can't make use of the @lift*@ functions.
 module Data.Array.Accelerate.Linear.Projection where
 
 import           Data.Array.Accelerate

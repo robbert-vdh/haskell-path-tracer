@@ -86,9 +86,10 @@ data Brdf
 
 -- | A primitive's material.
 data Material = Material
+  {
   -- | A material's natural color. This is the color of the light it emits if
   -- the illuminance is non-zero, and this also controls light absorption.
-  { _materialColor       :: {-# UNPACK #-} Color
+    _materialColor       :: {-# UNPACK #-} Color
   -- | The amount of light the object emits.
   , _materialIlluminance :: {-# UNPACK #-} Float
   -- | The BRDF to use for this material, see 'Brdf'.

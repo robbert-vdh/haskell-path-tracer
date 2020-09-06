@@ -98,12 +98,12 @@ translate delta camera = camera & position' +~ translation
 fromHomogeneous :: Elt a => Exp (V4 a) -> Exp (V3 a)
 fromHomogeneous (V4_ x y z _) = V3_ x y z
 
--- | The world's 'forward' direction. This is the direction the camera looks
+-- | The world's /forward/ direction. This is the direction the camera looks
 -- into when it has not been rotated.
 forwardVector :: V3 Float
 forwardVector = V3 0.0 0.0 (-1.0)
 
--- | The world's 'up' direction. This is used in combination in cross products
+-- | The world's /up/ direction. This is used in combination in cross products
 -- to calculate orthogonal vectors and perspectives.
 upVector :: V3 Float
 upVector = V3 0.0 1.0 0.0
