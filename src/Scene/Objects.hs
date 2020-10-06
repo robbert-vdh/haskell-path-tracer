@@ -33,7 +33,7 @@ import qualified Prelude                       as P
 --
 -- The RNG seeds should be reseeded periodically since we're using very
 -- rudimentary PRNG algorithms.
-type RenderResult = Matrix (Color, SFC64)
+type RenderResult = Matrix (Color, SFC32)
 
 -- * Objects
 

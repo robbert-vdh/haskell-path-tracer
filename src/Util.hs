@@ -111,15 +111,15 @@ vecToFloat = fmap toFloating
 
 -- | Generate a random vector whose three values are in the range @[-1, 1]@.
 -- This value can be used to create a quaternion for rotation a vector.
-genVec :: Exp SFC64 -> Exp (V3 Float, SFC64)
+genVec :: Exp SFC32 -> Exp (V3 Float, SFC32)
 genVec seed = P.uncurry T2 $ runRandom seed (V3_ <$> rng <*> rng <*> rng)
   where
-    rng :: Random (Exp SFC64) (Exp Float)
+    rng :: Random (Exp SFC32) (Exp Float)
     rng = (\x -> (x * 2.0) - 1.0) <$> random
 
 -- | Create an RNG seed for every screen pixel. This function is used when
 -- resetting the rendering texture and when reseeding the RNGs.
-genSeeds :: IO (Acc (Matrix SFC64))
+genSeeds :: IO (Acc (Matrix SFC32))
 genSeeds = do
   rng     <- Rng.createSystemRandom
   createWith . use <$> fromFunctionM
@@ -201,7 +201,7 @@ screenSize =
 
 -- | The output matrix initialized with all zero values and intiial seeds. This
 -- is used during the initialization and after moving the camera.
-initialOutput :: IO (Acc (Matrix (Color, SFC64)))
+initialOutput :: IO (Acc (Matrix (Color, SFC32)))
 initialOutput = map (T2 (V3_ 0.0 0.0 0.0)) <$> genSeeds
 
 -- | A matrix containing coordinates for every pixel on the screen. This is used
