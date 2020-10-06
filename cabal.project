@@ -57,3 +57,9 @@ source-repository-package
     type: git
     location: https://github.com/tmcdonell/lens-accelerate.git
     tag: 940c5cb3d9cd5d54f4b1fb7bdece6da38320a96f
+
+-- sfc-random
+source-repository-package
+    type: git
+    location: https://github.com/robbert-vdh/sfc-random-accelerate.git
+    tag: 1b892a4f40a41bcdda56a22ab34ba629d0e8bf51

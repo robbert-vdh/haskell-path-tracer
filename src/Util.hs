@@ -2,28 +2,21 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE ViewPatterns #-}
 
 -- | Small utility functions for conversions.
 module Util where
 
-import           Control.Monad                  ( replicateM )
-import           Control.Monad.State.Strict     ( runState
-                                                , state
-                                                )
 import           Data.Array.Accelerate         as A
                                          hiding ( pattern V2
                                                 , pattern V3
                                                 )
-import           Data.Array.Accelerate.Data.Bits
-                                                ( unsafeShiftL
-                                                , unsafeShiftR
-                                                , xor
-                                                )
-import qualified Data.Array.Accelerate.Sugar.Shape
-                                               as S
+import           Data.Array.Accelerate.System.Random.SFC
+                                               as A
 import           Data.Array.Accelerate.Control.Lens
+                                         hiding ( use )
 import           Data.Array.Accelerate.Data.Functor
                                                as A
                                          hiding ( (<$>) )
@@ -116,51 +109,30 @@ vecToFloat = fmap toFloating
 
 -- ** RNG
 
--- | Use an xorshift pseudo random number generator to generate a 'Float' from a
--- seed. The result consists of the generated float and a new seed. The
--- generated floats are in the `[-1, 1]` range.
---
--- The function returns a tuple of 'Exp's instead of a single 'Exp' tuple so we
--- can make use of the state monad.
-genFloat :: Exp Word32 -> Exp (Float, Word32)
-genFloat = P.uncurry T2 . genFloat'
-
--- | The same function as 'genFloat', but with the result and the next seed
--- split into a tuple of 'Exp's instead of a single 'Exp' tuple. This is so we
--- can use the state monad to thread the seed to multiple calculations.
-genFloat' :: Exp Word32 -> (Exp Float, Exp Word32)
-genFloat' seed = (nextFloat, nextSeed)
- where
-  seed'     = seed `xor` (seed `unsafeShiftL` 13)
-  seed''    = seed' `xor` (seed' `unsafeShiftR` 17)
-  nextSeed  = seed'' `xor` (seed'' `unsafeShiftL` 5)
-
-  nextFloat = fromIntegral nextSeed / (2 ** 31) - 1
-
 -- | Generate a random vector whose three values are in the range @[-1, 1]@.
 -- This value can be used to create a quaternion for rotation a vector.
-genVec :: Exp Word32 -> Exp (V3 Float, Word32)
-genVec seed = P.uncurry T2 $ runState (V3_ <$> rng <*> rng <*> rng) seed
-  where rng = state genFloat'
+genVec :: Exp SFC64 -> Exp (V3 Float, SFC64)
+genVec seed = P.uncurry T2 $ runRandom seed (V3_ <$> rng <*> rng <*> rng)
+  where
+    rng :: Random (Exp SFC64) (Exp Float)
+    rng = (\x -> (x * 2.0) - 1.0) <$> random
 
--- | Create a RNG seed for every screen pixel. This function is used when
+-- | Create an RNG seed for every screen pixel. This function is used when
 -- resetting the rendering texture and when reseeding the RNGs.
-genSeeds :: IO [Word32]
+genSeeds :: IO (Acc (Matrix SFC64))
 genSeeds = do
-  rng <- Rng.createSystemRandom
-  replicateM (S.size screenShape) (Rng.uniform rng)
+  rng     <- Rng.createSystemRandom
+  createWith . use <$> fromFunctionM
+    screenShape
+    (const $ Rng.uniform rng)
 
 -- | Reseed a rendering texture by replacing the seeds stored in every pixel
 -- tuple with a newly generated value. This is important because 'genFloat'
 -- relies on a very simple PRNG. While this is good enough for our use cases,
 -- you can still start to see the RNGs converge if you leave the algorithm
 -- running for long enough.
---
--- TODO: Use Vectors instead of lists here
-reseed :: RenderResult -> IO RenderResult
-reseed m =
-  fromList screenShape . P.zipWith (\(c, _) s -> (c, s)) old <$> genSeeds
-  where old = toList m
+reseed :: Acc RenderResult -> IO (Acc RenderResult)
+reseed m = zipWith (\(T2 c _) s -> T2 c s) m <$> genSeeds
 
 -- ** Mapping and folding over a scene
 --
@@ -229,8 +201,8 @@ screenSize =
 
 -- | The output matrix initialized with all zero values and intiial seeds. This
 -- is used during the initialization and after moving the camera.
-initialOutput :: IO (Matrix (Color, Word32))
-initialOutput = fromList screenShape . P.map (V3 0.0 0.0 0.0, ) <$> genSeeds
+initialOutput :: IO (Acc (Matrix (Color, SFC64)))
+initialOutput = map (T2 (V3_ 0.0 0.0 0.0)) <$> genSeeds
 
 -- | A matrix containing coordinates for every pixel on the screen. This is used
 -- to cast the actual rays.

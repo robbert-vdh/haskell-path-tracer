@@ -46,7 +46,7 @@ library
         linear-accelerate ^>=0.7.0.0,
         linear ^>=1.21.1,
         mwc-random ^>=0.14.0.0,
-        mtl ^>=2.2.2,
+        sfc-random-accelerate,
 
     other-extensions:
         ConstraintKinds

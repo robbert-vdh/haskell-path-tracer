@@ -18,6 +18,8 @@ import           Data.Array.Accelerate         as A
 import           Data.Array.Accelerate.Control.Lens
                                          hiding ( Const )
 import           Data.Array.Accelerate.Linear  as A
+import           Data.Array.Accelerate.System.Random.SFC
+                                               as A
 import           Data.Typeable
 
 import           Prelude                        ( (<$>) )
@@ -31,7 +33,7 @@ import qualified Prelude                       as P
 --
 -- The RNG seeds should be reseeded periodically since we're using very
 -- rudimentary PRNG algorithms.
-type RenderResult = Matrix (Color, Word32)
+type RenderResult = Matrix (Color, SFC64)
 
 -- * Objects
 

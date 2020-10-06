@@ -24,6 +24,7 @@ import           Data.Array.Accelerate.Control.Lens
 import           Data.Array.Accelerate.Data.Maybe
 import           Data.Array.Accelerate.Data.Functor
 import           Data.Array.Accelerate.Linear
+import           Data.Array.Accelerate.System.Random.SFC
 
 import qualified Prelude                       as P
 
@@ -32,6 +33,8 @@ import           Scene.Objects
 import           Scene.World
 import           Util
 
+-- TODO: Rename @seed@ to @gen@ everywhere
+
 -- | A ray along with all the information needed to produce color values. The
 -- format here is:
 --
@@ -39,13 +42,13 @@ import           Util
 --     (ray, screen_pixel, rng_seed, throughput)
 -- @
 --
-type RayState = (RayF, V2 Int, V3 Float, Word32)
+type RayState = (RayF, V2 Int, V3 Float, SFC64)
 
 -- | The resulting color contribution from a ray hitting a primitive. This is a
 -- pair of @(screen_pixel, color_value, seed)@. All of these generated values
 -- should be added to the accumulated value from the previous frame during the
 -- rendering cycle.
-type RayResult = (V2 Int, Color, Word32)
+type RayResult = (V2 Int, Color, SFC64)
 
 -- | A marker for which ray tracing implementation to use. At the moment there
 -- are two algorithms:
@@ -184,8 +187,8 @@ render Streams screen camera acc =
   -- guarantees that the seeds from the results matrix are unique.
   --
   -- TODO: Is ts there a way around this?
-  updateSeed :: Exp (Color, Word32) -> Exp (Color, Word32)
-  updateSeed (T2 c seed) = T2 c (P.snd $ genFloat' seed)
+  updateSeed :: Exp (Color, SFC64) -> Exp (Color, SFC64)
+  updateSeed (T2 c seed) = T2 c (P.snd . runRandom seed $ random @_ @Float)
 
 render Inline screen camera acc = zipWith
   (\(T2 new seed') (T2 old _) -> T2 (new + old) seed')
@@ -295,7 +298,7 @@ traceStep scene state =
   -- haven't implemented any features that would cause rays to diverge, so we
   -- can ignore the integer argument for now.
   computeNewRay
-    :: Exp (RayF, Maybe (NormalP, Material), V2 Int, V3 Float, Word32)
+    :: Exp (RayF, Maybe (NormalP, Material), V2 Int, V3 Float, SFC64)
     -> Exp Int
     -> Exp RayState
   computeNewRay (T5 ray intersection pixel throughput seed) _ =
@@ -308,7 +311,7 @@ traceStep scene state =
   -- | Compute the 'RayResult' for a ray that intersects a primitive. This is
   -- to be used with 'expand' and assumes that there has been an intersection.
   computeResult
-    :: Exp (RayF, Maybe (NormalP, Material), V2 Int, V3 Float, Word32)
+    :: Exp (RayF, Maybe (NormalP, Material), V2 Int, V3 Float, SFC64)
     -> Exp Int
     -> Exp RayResult
   computeResult (T5 _ intersection pixel throughput seed) _ =
@@ -338,7 +341,7 @@ numNewRays iMaterial throughput =
 -- TODO: I feel like some things are normalized when they shouldn't be. Diffuse
 --       spheres look like they have a ring of bright light on them, but I feel
 --       like it stops too abruptly for it to just be diffusion.
-traceInline :: Exp Int -> Scene -> Exp (RayF, Word32) -> Exp (Color, Word32)
+traceInline :: Exp Int -> Scene -> Exp (RayF, SFC64) -> Exp (Color, SFC64)
 traceInline limit scene primaryRay =
   let T3 (T2 _ seed) result _ = iterate
         limit
@@ -354,8 +357,8 @@ traceInline limit scene primaryRay =
   -- calculate the resulting color value and to prepare the next ray after
   -- bouncing.
   prepareRay
-    :: Exp ((RayF, Word32), Color, V3 Float)
-    -> Exp ((RayF, Word32), Color, V3 Float)
+    :: Exp ((RayF, SFC64), Color, V3 Float)
+    -> Exp ((RayF, SFC64), Color, V3 Float)
   prepareRay current@(T3 (T2 ray seed) result throughput) =
     let nextHit = checkHit scene ray
     in  if nearZero throughput || isNothing nextHit
@@ -365,9 +368,9 @@ traceInline limit scene primaryRay =
   -- | Calculate the currently accumulated color and throughput as well as the
   -- next ray after we have intersected with something.
   computeRay
-    :: Exp ((RayF, Word32), Color, V3 Float)
+    :: Exp ((RayF, SFC64), Color, V3 Float)
     -> Exp (NormalP, Material)
-    -> Exp ((RayF, Word32), Color, V3 Float)
+    -> Exp ((RayF, SFC64), Color, V3 Float)
   computeRay (T3 (T2 ray seed) result throughput) (T2 iNormal iMaterial) =
     let
       -- TODO: Extract this to a function as it's the same as in 'tracestep'
@@ -392,8 +395,8 @@ calcNextRay
   :: Exp Material
   -> Exp NormalP
   -> Exp RayF
-  -> Exp Word32
-  -> Exp (RayF, V3 Float, Word32)
+  -> Exp SFC64
+  -> Exp (RayF, V3 Float, SFC64)
 calcNextRay iMaterial (Ray_ iPoint iNormal) ray seed =
   let
     T2 rotationVector seed' = genVec seed

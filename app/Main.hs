@@ -33,6 +33,7 @@ import           Control.Concurrent
 import           Control.Lens
 import           Control.Monad.IO.Class
 import           Control.Monad.State.Strict
+import qualified Data.Array.Accelerate         as A
 import qualified Data.Array.Accelerate.IO.Data.Vector.Storable
                                                as A
 import           Data.ByteString.Char8          ( ByteString )
@@ -56,9 +57,13 @@ import           System.IO.Temp
 
 #ifdef USE_CPU_BACKEND
 import           Data.Array.Accelerate.LLVM.Native
-                                                ( runN )
+                                                ( runN
+                                                , run
+                                                )
 #else
-import           Data.Array.Accelerate.LLVM.PTX ( runN )
+import           Data.Array.Accelerate.LLVM.PTX ( runN
+                                                , run
+                                                )
 #endif
 
 import qualified Files
@@ -147,7 +152,7 @@ main = do
     }
 
   let compute' = compileFor arguments
-  seeds   <- initialOutput
+  seeds   <- run <$> initialOutput
   mResult <- newMVar $! Result { _resultCompute = compute'
                                , _resultValue   = compute' initialCamera (0, seeds)
                                , _resultCamera  = initialCamera
@@ -219,7 +224,11 @@ computationLoop mResult = flip evalStateT reseedInterval $ forever $ do
         -- but it won't cause any data races. We only have to update the texture
         -- so we'll leave the first element of the tuple alone.
         result   <- takeMVar mResult
-        reseeded <- reseed $ result ^. value . _2
+
+        -- XXX: Since this uses the IO monad there's no way around this @run (f
+        --      $ use xs)@ dance, but performance seems to be even better than
+        --      before since we're no longer using lists.
+        reseeded <- run <$> (reseed . A.use $ result ^. value . _2)
 
         void $! putMVar mResult $! result & value . _2 .~ reseeded
       modify (+ reseedInterval)
@@ -294,7 +303,7 @@ inputLoop mResult = time >>= go
     -- We should update the camera only when we receive user input. If the
     -- camera does get moved, we should reset the current result.
     when (deltas /= initialDeltas) $ do
-      emptyOutput <- initialOutput
+      emptyOutput <- run <$> initialOutput
       result      <- takeMVar mResult
 
       -- The distance the camera moves depends on the time elapsed since the
